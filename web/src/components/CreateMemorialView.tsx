@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import type { CallTargetKind, Memorial } from '../types/memorial'
 import {
   createMemorial,
+  deletePhoto,
   upsertCallTarget,
   uploadPhoto,
 } from '../services/memorialService'
@@ -16,7 +17,7 @@ type Step = 'title' | 'dog_a' | 'dog_b_choice' | 'dog_b' | 'together_choice' | '
 interface TargetDraft {
   id: string
   displayName: string
-  photos: { id: string; publicUrl: string }[]
+  photos: { id: string; publicUrl: string; storagePath?: string }[]
 }
 
 export function CreateMemorialView() {
@@ -52,9 +53,8 @@ export function CreateMemorialView() {
     kind: CallTargetKind,
     displayName: string,
     sortOrder: number,
-    targetId: string,
     files: FileList,
-    currentPhotos: { id: string; publicUrl: string }[],
+    currentPhotos: { id: string; publicUrl: string; storagePath?: string }[],
     setDraft: (d: TargetDraft) => void,
     draft: TargetDraft,
   ) => {
@@ -62,17 +62,21 @@ export function CreateMemorialView() {
     setError(null)
     try {
       const m = await ensureMemorial()
-      const resolvedTargetId =
-        targetId || (await saveTarget(kind, displayName, sortOrder))
       const newPhotos = [...currentPhotos]
+      let resolvedTargetId = draft.id
       for (let i = 0; i < files.length; i++) {
-        const asset = await uploadPhoto(
+        const { asset, targetId } = await uploadPhoto(
           m.editToken!,
-          resolvedTargetId,
+          { kind, displayName, sortOrder },
           files[i],
           currentPhotos.length + i,
         )
-        newPhotos.push({ id: asset.id, publicUrl: asset.publicUrl })
+        resolvedTargetId = targetId
+        newPhotos.push({
+          id: asset.id,
+          publicUrl: asset.publicUrl,
+          storagePath: asset.storagePath,
+        })
       }
       setDraft({
         ...draft,
@@ -83,6 +87,29 @@ export function CreateMemorialView() {
       if (!memorial) setMemorial(m)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeletePhoto = async (
+    mediaId: string,
+    setDraft: (draft: TargetDraft) => void,
+    draft: TargetDraft,
+  ) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const m = await ensureMemorial()
+      const photo = draft.photos.find((p) => p.id === mediaId)
+      await deletePhoto(m.editToken!, mediaId, photo?.storagePath)
+      setDraft({
+        ...draft,
+        photos: draft.photos.filter((p) => p.id !== mediaId),
+      })
+      if (!memorial) setMemorial(m)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Delete failed')
     } finally {
       setLoading(false)
     }
@@ -250,14 +277,13 @@ export function CreateMemorialView() {
                   'dog_a',
                   dogA.displayName.trim() || 'Dog',
                   0,
-                  dogA.id,
                   files,
                   dogA.photos,
                   setDogA,
                   dogA,
                 )
               }
-              onDelete={() => {}}
+              onDelete={(mediaId) => handleDeletePhoto(mediaId, setDogA, dogA)}
               disabled={loading}
             />
             <button
@@ -308,14 +334,13 @@ export function CreateMemorialView() {
                   'dog_b',
                   dogB.displayName.trim() || 'Dog 2',
                   1,
-                  dogB.id,
                   files,
                   dogB.photos,
                   setDogB,
                   dogB,
                 )
               }
-              onDelete={() => {}}
+              onDelete={(mediaId) => handleDeletePhoto(mediaId, setDogB, dogB)}
               disabled={loading}
             />
             <button
@@ -358,14 +383,13 @@ export function CreateMemorialView() {
                   'together',
                   together.displayName.trim() || 'Together',
                   2,
-                  together.id,
                   files,
                   together.photos,
                   setTogether,
                   together,
                 )
               }
-              onDelete={() => {}}
+              onDelete={(mediaId) => handleDeletePhoto(mediaId, setTogether, together)}
               disabled={loading}
             />
             <button

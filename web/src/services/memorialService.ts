@@ -71,7 +71,7 @@ function formatUploadError(err: unknown): string {
   const lower = message.toLowerCase()
 
   if (lower.includes('row-level security')) {
-    return 'Photo upload was blocked. Finish creating the memorial first, then try again. If this keeps happening, re-run the latest web/supabase/migration.sql in Supabase.'
+    return 'Photo could not be saved. The app registers photos via a secure RPC — if this persists, confirm register_media_asset is deployed and re-run web/supabase/migration.sql.'
   }
   if (lower.includes('invalid edit token or target')) {
     return 'Could not find this dog profile. Refresh the page and try again.'
@@ -87,6 +87,20 @@ function formatUploadError(err: unknown): string {
   }
 
   return message || 'Upload failed'
+}
+
+function formatDeleteError(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err)
+  const lower = message.toLowerCase()
+
+  if (lower.includes('row-level security')) {
+    return 'Photo could not be removed. The app deletes via a secure RPC — if this persists, confirm delete_media_asset is deployed.'
+  }
+  if (lower.includes('invalid edit token or media')) {
+    return 'Photo not found. Refresh the page and try again.'
+  }
+
+  return message || 'Delete failed'
 }
 
 // ─── Demo implementations ─────────────────────────────────────────────────
@@ -164,28 +178,30 @@ function demoUpsertTarget(
 
 async function demoAddPhoto(
   editToken: string,
-  targetId: string,
+  target: { kind: CallTargetKind; displayName: string; sortOrder: number },
   file: File,
   sortOrder: number,
-): Promise<MediaAsset> {
-  const store = readDemoStore()
-  const memorial = store.memorials.find((m) => m.editToken === editToken)
-  if (!memorial) throw new Error('Memorial not found')
-  const target = memorial.targets.find((t) => t.id === targetId)
-  if (!target) throw new Error('Target not found')
+): Promise<PhotoUploadResult> {
+  const callTarget = demoUpsertTarget(
+    editToken,
+    target.kind,
+    target.displayName,
+    target.sortOrder,
+  )
 
   const dataUrl = await fileToDataUrl(file)
   const asset: MediaAsset = {
     id: generateId(),
     publicUrl: dataUrl,
-    storagePath: `demo/${targetId}/${file.name}`,
+    storagePath: `demo/${callTarget.id}/${file.name}`,
     reactionTag: null,
     sortOrder,
   }
-  target.media.push(asset)
-  target.media.sort((a, b) => a.sortOrder - b.sortOrder)
+  callTarget.media.push(asset)
+  callTarget.media.sort((a, b) => a.sortOrder - b.sortOrder)
+  const store = readDemoStore()
   writeDemoStore(store)
-  return asset
+  return { asset, targetId: callTarget.id }
 }
 
 function demoDeletePhoto(editToken: string, mediaId: string): void {
@@ -230,6 +246,17 @@ function fileToDataUrl(file: File): Promise<string> {
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────
+
+export interface UploadPhotoTarget {
+  kind: CallTargetKind
+  displayName: string
+  sortOrder: number
+}
+
+export interface PhotoUploadResult {
+  asset: MediaAsset
+  targetId: string
+}
 
 export async function createMemorial(
   input: CreateMemorialInput,
@@ -323,23 +350,28 @@ export async function upsertCallTarget(
 
 export async function uploadPhoto(
   editToken: string,
-  targetId: string,
+  target: UploadPhotoTarget,
   file: File,
-  sortOrder: number,
-): Promise<MediaAsset> {
-  if (isDemoMode()) return demoAddPhoto(editToken, targetId, file, sortOrder)
+  mediaSortOrder: number,
+): Promise<PhotoUploadResult> {
+  if (isDemoMode()) return demoAddPhoto(editToken, target, file, mediaSortOrder)
 
   if (!editToken?.trim()) {
     throw new Error('Memorial is not ready yet. Save the memorial name and try again.')
   }
-  if (!targetId?.trim()) {
-    throw new Error('Dog profile is not ready yet. Wait a moment and try again.')
-  }
+
+  // Ensure the call target row exists before storage upload + media registration.
+  const callTarget = await upsertCallTarget(
+    editToken,
+    target.kind,
+    target.displayName,
+    target.sortOrder,
+  )
 
   const supabase = getSupabase()!
   const ext = file.name.split('.').pop() ?? 'jpg'
   const filename = `${crypto.randomUUID()}.${ext}`
-  const storagePath = `${editToken}/${targetId}/${filename}`
+  const storagePath = `${editToken}/${callTarget.id}/${filename}`
 
   const { error: uploadError } = await supabase.storage
     .from('memorial-photos')
@@ -355,24 +387,29 @@ export async function uploadPhoto(
     .from('memorial-photos')
     .getPublicUrl(storagePath)
 
+  // media_assets has RLS with no anon INSERT policies — register only via RPC.
   const { data, error } = await supabase.rpc('register_media_asset', {
     p_edit_token: editToken,
-    p_target_id: targetId,
+    p_target_id: callTarget.id,
     p_storage_path: storagePath,
     p_public_url: urlData.publicUrl,
-    p_sort_order: sortOrder,
+    p_sort_order: mediaSortOrder,
     p_reaction_tag: null,
   })
   if (error) {
     await supabase.storage.from('memorial-photos').remove([storagePath])
     throw new Error(formatUploadError(error))
   }
-  return mapRpcMedia(data as Record<string, unknown>)
+  return {
+    asset: mapRpcMedia(data as Record<string, unknown>),
+    targetId: callTarget.id,
+  }
 }
 
 export async function deletePhoto(
   editToken: string,
   mediaId: string,
+  storagePath?: string,
 ): Promise<void> {
   if (isDemoMode()) {
     demoDeletePhoto(editToken, mediaId)
@@ -380,26 +417,37 @@ export async function deletePhoto(
   }
 
   const supabase = getSupabase()!
-  const memorial = await getMemorialByEditToken(editToken)
-  if (!memorial) throw new Error('Memorial not found')
+  let resolvedStoragePath = storagePath ?? null
 
-  let storagePath: string | null = null
-  for (const target of memorial.targets) {
-    const asset = target.media.find((m) => m.id === mediaId)
-    if (asset) {
-      storagePath = asset.storagePath
-      break
+  if (!resolvedStoragePath) {
+    const memorial = await getMemorialByEditToken(editToken)
+    if (!memorial) throw new Error('Memorial not found')
+
+    for (const target of memorial.targets) {
+      const asset = target.media.find((m) => m.id === mediaId)
+      if (asset) {
+        resolvedStoragePath = asset.storagePath
+        break
+      }
     }
   }
 
+  // media_assets has RLS with no anon DELETE policies — remove only via RPC.
   const { error } = await supabase.rpc('delete_media_asset', {
     p_edit_token: editToken,
     p_media_id: mediaId,
   })
-  if (error) throw error
+  if (error) {
+    throw new Error(formatDeleteError(error))
+  }
 
-  if (storagePath) {
-    await supabase.storage.from('memorial-photos').remove([storagePath])
+  if (resolvedStoragePath && !resolvedStoragePath.startsWith('demo/')) {
+    const { error: storageError } = await supabase.storage
+      .from('memorial-photos')
+      .remove([resolvedStoragePath])
+    if (storageError) {
+      throw new Error(formatDeleteError(storageError))
+    }
   }
 }
 

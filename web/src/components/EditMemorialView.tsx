@@ -82,16 +82,14 @@ export function EditMemorialView() {
     setSaving(true)
     setError(null)
     try {
-      const resolvedTarget = await upsertCallTarget(
-        editToken,
-        target.kind,
-        target.displayName.trim() || target.kind,
-        target.sortOrder,
-      )
       for (let i = 0; i < files.length; i++) {
         await uploadPhoto(
           editToken,
-          resolvedTarget.id,
+          {
+            kind: target.kind,
+            displayName: target.displayName.trim() || target.kind,
+            sortOrder: target.sortOrder,
+          },
           files[i],
           target.media.length + i,
         )
@@ -104,12 +102,19 @@ export function EditMemorialView() {
     }
   }
 
-  const handleDeletePhoto = async (mediaId: string) => {
-    if (!editToken) return
+  const handleDeletePhoto = async (mediaId: string, storagePath?: string) => {
+    if (!editToken || !memorial) return
     setSaving(true)
+    setError(null)
     try {
-      await deletePhoto(editToken, mediaId)
-      void load()
+      await deletePhoto(editToken, mediaId, storagePath)
+      setMemorial({
+        ...memorial,
+        targets: memorial.targets.map((target) => ({
+          ...target,
+          media: target.media.filter((m) => m.id !== mediaId),
+        })),
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed')
     } finally {
@@ -261,7 +266,10 @@ export function EditMemorialView() {
             <PhotoUploader
               photos={target.media}
               onUpload={(files) => handleUpload(target, files)}
-              onDelete={handleDeletePhoto}
+              onDelete={(mediaId) => {
+                const photo = target.media.find((m) => m.id === mediaId)
+                void handleDeletePhoto(mediaId, photo?.storagePath)
+              }}
               disabled={saving}
             />
           </div>
