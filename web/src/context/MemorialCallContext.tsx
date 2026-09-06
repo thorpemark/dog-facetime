@@ -9,22 +9,18 @@ import {
   type ReactNode,
 } from 'react'
 import { useKeywordSpotter } from '../hooks/useKeywordSpotter'
-import { useProfile } from '../hooks/useProfile'
-import { useVideoMixer } from '../hooks/useVideoMixer'
+import { useMediaPlayback } from '../hooks/useMediaPlayback'
 import type {
   BehaviorState,
   CallPhase,
   DogProfile,
   KeywordRulesConfig,
 } from '../types'
+import { DEFAULT_PROFILE } from '../types'
 import { loadKeywordRules } from '../utils/keywordRules'
 
 interface MemorialCallContextValue {
   profile: DogProfile
-  setProfile: (profile: DogProfile) => void
-  hasCompletedOnboarding: boolean
-  completeOnboarding: () => void
-  resetOnboarding: () => void
   callPhase: CallPhase
   behaviorState: BehaviorState
   isMuted: boolean
@@ -34,10 +30,11 @@ interface MemorialCallContextValue {
   lastTranscript: string
   speechSupported: boolean
   speechError: string | null
-  videoMixer: ReturnType<typeof useVideoMixer>
+  mediaPlayback: ReturnType<typeof useMediaPlayback>
   beginIncomingCall: () => void
   acceptCall: () => void
   endCall: () => void
+  declineCall: () => void
   returnToIdleAfterEnd: () => void
   toggleMute: () => void
   triggerReaction: (clipId: string) => void
@@ -46,9 +43,19 @@ interface MemorialCallContextValue {
 
 const MemorialCallContext = createContext<MemorialCallContextValue | null>(null)
 
-export function MemorialCallProvider({ children }: { children: ReactNode }) {
-  const profileState = useProfile()
-  const [callPhase, setCallPhase] = useState<CallPhase>('onboarding')
+interface MemorialCallProviderProps {
+  children: ReactNode
+  initialProfile?: DogProfile
+}
+
+export function MemorialCallProvider({
+  children,
+  initialProfile,
+}: MemorialCallProviderProps) {
+  const profile = initialProfile ?? DEFAULT_PROFILE
+  const photoUrls = profile.photoUrls ?? []
+
+  const [callPhase, setCallPhase] = useState<CallPhase>('home')
   const [behaviorState, setBehaviorState] = useState<BehaviorState>({
     type: 'idle',
   })
@@ -82,7 +89,7 @@ export function MemorialCallProvider({ children }: { children: ReactNode }) {
     triggerReactionRef.current(ruleId)
   })
 
-  const videoMixer = useVideoMixer(rulesConfig)
+  const mediaPlayback = useMediaPlayback(photoUrls, rulesConfig)
 
   const startListening = useCallback(() => {
     if (
@@ -94,11 +101,11 @@ export function MemorialCallProvider({ children }: { children: ReactNode }) {
     }
     keywordSpotter.startListening(
       rulesConfig.rules,
-      profileState.profile.dogName,
-      profileState.profile.ownerName,
+      profile.dogName,
+      profile.ownerName,
     )
     setBehaviorState({ type: 'listen' })
-  }, [keywordSpotter, profileState.profile, rulesConfig])
+  }, [keywordSpotter, profile.dogName, profile.ownerName, rulesConfig])
 
   const triggerReaction = useCallback(
     (clipId: string) => {
@@ -110,9 +117,9 @@ export function MemorialCallProvider({ children }: { children: ReactNode }) {
       keywordSpotter.stopListening()
       if ('vibrate' in navigator) navigator.vibrate(30)
 
-      videoMixer.playReaction(clipId, enterCooldown)
+      mediaPlayback.playReaction(clipId, enterCooldown)
     },
-    [enterCooldown, keywordSpotter, videoMixer],
+    [enterCooldown, keywordSpotter, mediaPlayback],
   )
 
   triggerReactionRef.current = triggerReaction
@@ -143,21 +150,30 @@ export function MemorialCallProvider({ children }: { children: ReactNode }) {
   const acceptCall = useCallback(() => {
     setCallPhase('active')
     setBehaviorState({ type: 'idle' })
-    videoMixer.loadIdle()
+    mediaPlayback.loadIdle()
     startListening()
-  }, [startListening, videoMixer])
+  }, [startListening, mediaPlayback])
 
   const endCall = useCallback(() => {
     setCallPhase('ended')
     setBehaviorState({ type: 'idle' })
     keywordSpotter.stopListening()
-    videoMixer.stop()
+    mediaPlayback.stop()
     setShowDebugPanel(false)
     if (cooldownRef.current) window.clearTimeout(cooldownRef.current)
-  }, [keywordSpotter, videoMixer])
+  }, [keywordSpotter, mediaPlayback])
+
+  const declineCall = useCallback(() => {
+    setCallPhase('home')
+    setBehaviorState({ type: 'idle' })
+    keywordSpotter.stopListening()
+    mediaPlayback.stop()
+    setShowDebugPanel(false)
+    if (cooldownRef.current) window.clearTimeout(cooldownRef.current)
+  }, [keywordSpotter, mediaPlayback])
 
   const returnToIdleAfterEnd = useCallback(() => {
-    setCallPhase('onboarding')
+    setCallPhase('home')
   }, [])
 
   const toggleMute = useCallback(() => {
@@ -174,7 +190,7 @@ export function MemorialCallProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<MemorialCallContextValue>(
     () => ({
-      ...profileState,
+      profile,
       callPhase,
       behaviorState,
       isMuted,
@@ -184,17 +200,18 @@ export function MemorialCallProvider({ children }: { children: ReactNode }) {
       lastTranscript: keywordSpotter.lastTranscript,
       speechSupported: keywordSpotter.speechSupported,
       speechError: keywordSpotter.speechError,
-      videoMixer,
+      mediaPlayback,
       beginIncomingCall,
       acceptCall,
       endCall,
+      declineCall,
       returnToIdleAfterEnd,
       toggleMute,
       triggerReaction,
       triggerPhrase: keywordSpotter.triggerPhrase,
     }),
     [
-      profileState,
+      profile,
       callPhase,
       behaviorState,
       isMuted,
@@ -204,10 +221,11 @@ export function MemorialCallProvider({ children }: { children: ReactNode }) {
       keywordSpotter.speechSupported,
       keywordSpotter.speechError,
       keywordSpotter.triggerPhrase,
-      videoMixer,
+      mediaPlayback,
       beginIncomingCall,
       acceptCall,
       endCall,
+      declineCall,
       returnToIdleAfterEnd,
       toggleMute,
       triggerReaction,

@@ -1,0 +1,415 @@
+import { getSupabase, isSupabaseConfigured } from '../lib/supabase'
+import { generateEditToken, generateId, generateShareId } from '../lib/ids'
+import type {
+  CallTarget,
+  CallTargetKind,
+  CreateMemorialInput,
+  MediaAsset,
+  Memorial,
+} from '../types/memorial'
+
+const DEMO_STORE_KEY = 'memorial-call-demo-store'
+
+interface DemoStore {
+  memorials: Memorial[]
+}
+
+function readDemoStore(): DemoStore {
+  try {
+    const raw = localStorage.getItem(DEMO_STORE_KEY)
+    if (raw) return JSON.parse(raw) as DemoStore
+  } catch {
+    /* ignore */
+  }
+  return { memorials: [] }
+}
+
+function writeDemoStore(store: DemoStore): void {
+  localStorage.setItem(DEMO_STORE_KEY, JSON.stringify(store))
+}
+
+function mapRpcMemorial(data: Record<string, unknown>): Memorial {
+  const targets = (data.targets as Record<string, unknown>[] | undefined) ?? []
+  return {
+    id: data.id as string,
+    title: data.title as string,
+    note: (data.note as string) ?? '',
+    shareId: data.share_id as string,
+    editToken: data.edit_token as string | undefined,
+    createdAt: data.created_at as string,
+    targets: targets.map(mapRpcTarget),
+  }
+}
+
+function mapRpcTarget(t: Record<string, unknown>): CallTarget {
+  const media = (t.media as Record<string, unknown>[] | undefined) ?? []
+  return {
+    id: t.id as string,
+    kind: t.kind as CallTargetKind,
+    displayName: t.display_name as string,
+    sortOrder: (t.sort_order as number) ?? 0,
+    media: media.map(mapRpcMedia),
+  }
+}
+
+function mapRpcMedia(m: Record<string, unknown>): MediaAsset {
+  return {
+    id: m.id as string,
+    publicUrl: m.public_url as string,
+    storagePath: m.storage_path as string,
+    reactionTag: (m.reaction_tag as string | null) ?? null,
+    sortOrder: (m.sort_order as number) ?? 0,
+  }
+}
+
+export function isDemoMode(): boolean {
+  return !isSupabaseConfigured
+}
+
+// ─── Demo implementations ─────────────────────────────────────────────────
+
+function demoCreateMemorial(input: CreateMemorialInput): Memorial {
+  const store = readDemoStore()
+  const memorial: Memorial = {
+    id: generateId(),
+    title: input.title.trim(),
+    note: input.note?.trim() ?? '',
+    shareId: generateShareId(),
+    editToken: generateEditToken(),
+    createdAt: new Date().toISOString(),
+    targets: [],
+  }
+  store.memorials.push(memorial)
+  writeDemoStore(store)
+  return memorial
+}
+
+function demoGetByShareId(shareId: string): Memorial | null {
+  const store = readDemoStore()
+  return store.memorials.find((m) => m.shareId === shareId) ?? null
+}
+
+function demoGetByEditToken(editToken: string): Memorial | null {
+  const store = readDemoStore()
+  return store.memorials.find((m) => m.editToken === editToken) ?? null
+}
+
+function demoUpdateMemorial(
+  editToken: string,
+  title: string,
+  note: string,
+): Memorial {
+  const store = readDemoStore()
+  const memorial = store.memorials.find((m) => m.editToken === editToken)
+  if (!memorial) throw new Error('Memorial not found')
+  memorial.title = title.trim()
+  memorial.note = note
+  writeDemoStore(store)
+  return memorial
+}
+
+function demoUpsertTarget(
+  editToken: string,
+  kind: CallTargetKind,
+  displayName: string,
+  sortOrder: number,
+): CallTarget {
+  const store = readDemoStore()
+  const memorial = store.memorials.find((m) => m.editToken === editToken)
+  if (!memorial) throw new Error('Memorial not found')
+
+  const existing = memorial.targets.find((t) => t.kind === kind)
+  if (existing) {
+    existing.displayName = displayName.trim()
+    existing.sortOrder = sortOrder
+    writeDemoStore(store)
+    return existing
+  }
+
+  const target: CallTarget = {
+    id: generateId(),
+    kind,
+    displayName: displayName.trim(),
+    sortOrder,
+    media: [],
+  }
+  memorial.targets.push(target)
+  memorial.targets.sort((a, b) => a.sortOrder - b.sortOrder)
+  writeDemoStore(store)
+  return target
+}
+
+async function demoAddPhoto(
+  editToken: string,
+  targetId: string,
+  file: File,
+  sortOrder: number,
+): Promise<MediaAsset> {
+  const store = readDemoStore()
+  const memorial = store.memorials.find((m) => m.editToken === editToken)
+  if (!memorial) throw new Error('Memorial not found')
+  const target = memorial.targets.find((t) => t.id === targetId)
+  if (!target) throw new Error('Target not found')
+
+  const dataUrl = await fileToDataUrl(file)
+  const asset: MediaAsset = {
+    id: generateId(),
+    publicUrl: dataUrl,
+    storagePath: `demo/${targetId}/${file.name}`,
+    reactionTag: null,
+    sortOrder,
+  }
+  target.media.push(asset)
+  target.media.sort((a, b) => a.sortOrder - b.sortOrder)
+  writeDemoStore(store)
+  return asset
+}
+
+function demoDeletePhoto(editToken: string, mediaId: string): void {
+  const store = readDemoStore()
+  const memorial = store.memorials.find((m) => m.editToken === editToken)
+  if (!memorial) throw new Error('Memorial not found')
+  for (const target of memorial.targets) {
+    const idx = target.media.findIndex((m) => m.id === mediaId)
+    if (idx >= 0) {
+      target.media.splice(idx, 1)
+      writeDemoStore(store)
+      return
+    }
+  }
+  throw new Error('Media not found')
+}
+
+function demoRegenerateShareId(editToken: string): string {
+  const store = readDemoStore()
+  const memorial = store.memorials.find((m) => m.editToken === editToken)
+  if (!memorial) throw new Error('Memorial not found')
+  memorial.shareId = generateShareId()
+  writeDemoStore(store)
+  return memorial.shareId
+}
+
+function demoDeleteTarget(editToken: string, targetId: string): void {
+  const store = readDemoStore()
+  const memorial = store.memorials.find((m) => m.editToken === editToken)
+  if (!memorial) throw new Error('Memorial not found')
+  memorial.targets = memorial.targets.filter((t) => t.id !== targetId)
+  writeDemoStore(store)
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+// ─── Public API ─────────────────────────────────────────────────────────────
+
+export async function createMemorial(
+  input: CreateMemorialInput,
+): Promise<Memorial> {
+  if (isDemoMode()) return demoCreateMemorial(input)
+
+  const supabase = getSupabase()!
+  const { data, error } = await supabase.rpc('create_memorial', {
+    p_title: input.title,
+    p_note: input.note ?? '',
+  })
+  if (error) throw error
+  return mapRpcMemorial(data as Record<string, unknown>)
+}
+
+export async function getMemorialByShareId(
+  shareId: string,
+): Promise<Memorial | null> {
+  if (isDemoMode()) return demoGetByShareId(shareId)
+
+  const supabase = getSupabase()!
+  const { data, error } = await supabase.rpc('get_memorial_public', {
+    p_share_id: shareId,
+  })
+  if (error) throw error
+  if (!data) return null
+  return mapRpcMemorial(data as Record<string, unknown>)
+}
+
+export async function getMemorialByEditToken(
+  editToken: string,
+): Promise<Memorial | null> {
+  if (isDemoMode()) return demoGetByEditToken(editToken)
+
+  const supabase = getSupabase()!
+  const { data, error } = await supabase.rpc('get_memorial_for_edit', {
+    p_edit_token: editToken,
+  })
+  if (error) throw error
+  if (!data) return null
+  return mapRpcMemorial(data as Record<string, unknown>)
+}
+
+export async function updateMemorial(
+  editToken: string,
+  title: string,
+  note: string,
+): Promise<Memorial> {
+  if (isDemoMode()) return demoUpdateMemorial(editToken, title, note)
+
+  const supabase = getSupabase()!
+  const { data, error } = await supabase.rpc('update_memorial', {
+    p_edit_token: editToken,
+    p_title: title,
+    p_note: note,
+  })
+  if (error) throw error
+  const memorial = await getMemorialByEditToken(editToken)
+  if (!memorial) throw new Error('Memorial not found')
+  const updated = data as Record<string, unknown>
+  memorial.title = updated.title as string
+  memorial.note = updated.note as string
+  return memorial
+}
+
+export async function upsertCallTarget(
+  editToken: string,
+  kind: CallTargetKind,
+  displayName: string,
+  sortOrder: number,
+): Promise<CallTarget> {
+  if (isDemoMode()) return demoUpsertTarget(editToken, kind, displayName, sortOrder)
+
+  const supabase = getSupabase()!
+  const { data, error } = await supabase.rpc('upsert_call_target', {
+    p_edit_token: editToken,
+    p_kind: kind,
+    p_display_name: displayName,
+    p_sort_order: sortOrder,
+  })
+  if (error) throw error
+  const t = data as Record<string, unknown>
+  return {
+    id: t.id as string,
+    kind: t.kind as CallTargetKind,
+    displayName: t.display_name as string,
+    sortOrder: (t.sort_order as number) ?? 0,
+    media: [],
+  }
+}
+
+export async function uploadPhoto(
+  editToken: string,
+  targetId: string,
+  file: File,
+  sortOrder: number,
+): Promise<MediaAsset> {
+  if (isDemoMode()) return demoAddPhoto(editToken, targetId, file, sortOrder)
+
+  const supabase = getSupabase()!
+  const ext = file.name.split('.').pop() ?? 'jpg'
+  const storagePath = `${editToken}/${targetId}/${crypto.randomUUID()}.${ext}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('memorial-photos')
+    .upload(storagePath, file, {
+      contentType: file.type || 'image/jpeg',
+      upsert: false,
+    })
+  if (uploadError) throw uploadError
+
+  const { data: urlData } = supabase.storage
+    .from('memorial-photos')
+    .getPublicUrl(storagePath)
+
+  const { data, error } = await supabase.rpc('register_media_asset', {
+    p_edit_token: editToken,
+    p_target_id: targetId,
+    p_storage_path: storagePath,
+    p_public_url: urlData.publicUrl,
+    p_sort_order: sortOrder,
+    p_reaction_tag: null,
+  })
+  if (error) throw error
+  return mapRpcMedia(data as Record<string, unknown>)
+}
+
+export async function deletePhoto(
+  editToken: string,
+  mediaId: string,
+): Promise<void> {
+  if (isDemoMode()) {
+    demoDeletePhoto(editToken, mediaId)
+    return
+  }
+
+  const supabase = getSupabase()!
+  const memorial = await getMemorialByEditToken(editToken)
+  if (!memorial) throw new Error('Memorial not found')
+
+  let storagePath: string | null = null
+  for (const target of memorial.targets) {
+    const asset = target.media.find((m) => m.id === mediaId)
+    if (asset) {
+      storagePath = asset.storagePath
+      break
+    }
+  }
+
+  const { error } = await supabase.rpc('delete_media_asset', {
+    p_edit_token: editToken,
+    p_media_id: mediaId,
+  })
+  if (error) throw error
+
+  if (storagePath) {
+    await supabase.storage.from('memorial-photos').remove([storagePath])
+  }
+}
+
+export async function regenerateShareId(editToken: string): Promise<string> {
+  if (isDemoMode()) return demoRegenerateShareId(editToken)
+
+  const supabase = getSupabase()!
+  const { data, error } = await supabase.rpc('regenerate_share_id', {
+    p_edit_token: editToken,
+  })
+  if (error) throw error
+  return (data as Record<string, unknown>).share_id as string
+}
+
+export async function deleteCallTarget(
+  editToken: string,
+  targetId: string,
+): Promise<void> {
+  if (isDemoMode()) {
+    demoDeleteTarget(editToken, targetId)
+    return
+  }
+
+  const supabase = getSupabase()!
+  const { error } = await supabase.rpc('delete_call_target', {
+    p_edit_token: editToken,
+    p_target_id: targetId,
+  })
+  if (error) throw error
+}
+
+export function memorialToCallProfile(
+  memorial: Memorial,
+  target: CallTarget,
+  ownerName = 'Family',
+): import('../types/memorial').CallSessionProfile {
+  const photoUrls = target.media
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((m) => m.publicUrl)
+
+  return {
+    dogName: target.displayName,
+    ownerName,
+    memorialNote: memorial.note,
+    memorialTitle: memorial.title,
+    targetKind: target.kind,
+    photoUrls,
+  }
+}

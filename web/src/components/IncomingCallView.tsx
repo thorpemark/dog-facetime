@@ -21,8 +21,7 @@ function CallActionButton({
 }
 
 export function IncomingCallView() {
-  const { profile, acceptCall, endCall, returnToIdleAfterEnd } =
-    useMemorialCall()
+  const { profile, acceptCall, declineCall } = useMemorialCall()
   const [pulse, setPulse] = useState(false)
 
   useEffect(() => {
@@ -49,10 +48,7 @@ export function IncomingCallView() {
           icon="📞"
           label="Decline"
           color="red"
-          onClick={() => {
-            endCall()
-            returnToIdleAfterEnd()
-          }}
+          onClick={declineCall}
         />
         <CallActionButton
           icon="📹"
