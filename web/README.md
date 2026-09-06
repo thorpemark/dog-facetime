@@ -34,6 +34,8 @@ Without Supabase env vars, the app runs in **demo mode** (memorials saved in `lo
 
 After setup, memorials are stored in Supabase with public share links (`/m/:shareId`) and secret edit links (`/edit/:editToken`). Photos upload to the `memorial-photos` storage bucket.
 
+**Photo upload troubleshooting:** The web app never inserts into `media_assets` directly — uploads go to storage at `{editToken}/{targetId}/…` and rows are created only via the `register_media_asset` RPC (tables have RLS with no anon INSERT policies). If registration fails with an RLS error, re-run [`supabase/migration.sql`](supabase/migration.sql) so the SECURITY DEFINER RPCs are present. Storage bucket policies can be relaxed to `bucket_id = 'memorial-photos'` only; the code fix above is still required for `media_assets`.
+
 ## Routes
 
 | Path | Purpose |
