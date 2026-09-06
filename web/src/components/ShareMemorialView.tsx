@@ -7,7 +7,6 @@ import {
 } from '../services/memorialService'
 import { MemorialCallProvider } from '../context/MemorialCallContext'
 import { MemorialCallFlow } from './MemorialCallFlow'
-import { appPath } from '../lib/urls'
 
 function targetLabel(target: CallTarget): string {
   if (target.kind === 'together') return target.displayName || 'Together'
@@ -76,7 +75,7 @@ export function ShareMemorialView() {
       <div className="screen form-screen">
         <div className="form-content centered">
           <p className="form-error">{error ?? 'Not found'}</p>
-          <button type="button" className="btn-text" onClick={() => navigate(appPath('/'))}>
+          <button type="button" className="btn-text" onClick={() => navigate('/')}>
             Go home
           </button>
         </div>
@@ -89,7 +88,7 @@ export function ShareMemorialView() {
       <div className="screen picker-screen">
         <div className="picker-content">
           <header className="picker-header">
-            <button type="button" className="btn-text back-btn" onClick={() => navigate(appPath('/'))}>
+            <button type="button" className="btn-text back-btn" onClick={() => navigate('/')}>
               ← Home
             </button>
             <h1>{memorial.title}</h1>

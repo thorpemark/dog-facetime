@@ -6,7 +6,7 @@ import {
   upsertCallTarget,
   uploadPhoto,
 } from '../services/memorialService'
-import { editUrl, shareUrl, appPath } from '../lib/urls'
+import { editUrl, shareUrl } from '../lib/urls'
 import { CopyLinkButton } from './CopyLinkButton'
 import { DemoModeBanner } from './DemoModeBanner'
 import { PhotoUploader } from './PhotoUploader'
@@ -175,7 +175,7 @@ export function CreateMemorialView() {
       <DemoModeBanner />
       <div className="form-content">
         <header className="form-header">
-          <button type="button" className="btn-text back-btn" onClick={() => navigate(appPath('/'))}>
+          <button type="button" className="btn-text back-btn" onClick={() => navigate('/')}>
             ← Back
           </button>
           <h1>Create Memorial</h1>
@@ -365,14 +365,14 @@ export function CreateMemorialView() {
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => navigate(appPath(`/m/${memorial.shareId}`))}
+              onClick={() => navigate(`/m/${memorial.shareId}`)}
             >
               Preview memorial
             </button>
             <button
               type="button"
               className="btn-text"
-              onClick={() => navigate(appPath(`/edit/${memorial.editToken}`))}
+              onClick={() => navigate(`/edit/${memorial.editToken}`)}
             >
               Edit photos &amp; names
             </button>

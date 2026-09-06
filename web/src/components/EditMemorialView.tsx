@@ -10,7 +10,7 @@ import {
   uploadPhoto,
   upsertCallTarget,
 } from '../services/memorialService'
-import { editUrl, shareUrl, appPath } from '../lib/urls'
+import { editUrl, shareUrl } from '../lib/urls'
 import { CopyLinkButton } from './CopyLinkButton'
 import { DemoModeBanner } from './DemoModeBanner'
 import { PhotoUploader } from './PhotoUploader'
@@ -165,7 +165,7 @@ export function EditMemorialView() {
       <div className="screen form-screen">
         <div className="form-content centered">
           <p className="form-error">{error ?? 'Not found'}</p>
-          <button type="button" className="btn-text" onClick={() => navigate(appPath('/'))}>
+          <button type="button" className="btn-text" onClick={() => navigate('/')}>
             Go home
           </button>
         </div>
@@ -181,7 +181,7 @@ export function EditMemorialView() {
       <DemoModeBanner />
       <div className="form-content scrollable">
         <header className="form-header">
-          <button type="button" className="btn-text back-btn" onClick={() => navigate(appPath('/'))}>
+          <button type="button" className="btn-text back-btn" onClick={() => navigate('/')}>
             ← Home
           </button>
           <h1>Edit Memorial</h1>
@@ -280,7 +280,7 @@ export function EditMemorialView() {
           <button
             type="button"
             className="btn-call"
-            onClick={() => navigate(appPath(`/m/${memorial.shareId}`))}
+            onClick={() => navigate(`/m/${memorial.shareId}`)}
           >
             Preview memorial
           </button>
