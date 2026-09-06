@@ -69,10 +69,9 @@ final class CallViewModel: ObservableObject {
 
     func transitionToListen() {
         guard callPhase == .active else { return }
-        guard case .react = behaviorState else {
-            behaviorState = .listen
-            startListening()
-        }
+        if case .react = behaviorState { return }
+        behaviorState = .listen
+        startListening()
     }
 
     /// Debug / manual trigger — also used when keyword spotter fires.
