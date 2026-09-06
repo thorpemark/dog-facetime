@@ -31,6 +31,32 @@ function isPendingPhotoId(id: string): boolean {
   return id.startsWith('pending-')
 }
 
+function confirmUploadedPhoto(
+  prev: TargetDraft,
+  tempId: string,
+  targetId: string,
+  asset: { id: string; publicUrl: string; storagePath?: string },
+): TargetDraft {
+  const pending = prev.photos.find((p) => p.id === tempId)
+  if (pending?.previewUrl) URL.revokeObjectURL(pending.previewUrl)
+
+  const confirmed: DraftPhoto = {
+    id: asset.id,
+    publicUrl: asset.publicUrl,
+    storagePath: asset.storagePath,
+  }
+
+  const withoutTemp = prev.photos.filter((p) => p.id !== tempId)
+  const alreadyPresent = withoutTemp.some((p) => p.id === asset.id)
+  const photos = alreadyPresent ? withoutTemp : [...withoutTemp, confirmed]
+
+  return {
+    ...prev,
+    id: targetId || prev.id,
+    photos,
+  }
+}
+
 export function CreateMemorialView() {
   const navigate = useNavigate()
   const [step, setStep] = useState<Step>('title')
@@ -100,8 +126,6 @@ export function CreateMemorialView() {
         throw new Error('Memorial is not ready yet. Go back and save the memorial name first.')
       }
 
-      let resolvedTargetId = ''
-
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
         const tempId = `pending-${crypto.randomUUID()}`
@@ -125,43 +149,23 @@ export function CreateMemorialView() {
           file,
           mediaSortOrder + i,
         )
-        resolvedTargetId = targetId
 
-        setDraft((prev) => ({
-          ...prev,
-          id: targetId,
-          photos: prev.photos.map((photo) =>
-            photo.id === tempId
-              ? {
-                  id: asset.id,
-                  publicUrl: asset.publicUrl,
-                  storagePath: asset.storagePath,
-                }
-              : photo,
-          ),
-        }))
-        URL.revokeObjectURL(previewUrl)
-      }
-
-      if (resolvedTargetId) {
-        setDraft((prev) => ({
-          ...prev,
-          id: resolvedTargetId,
-          displayName,
-        }))
+        setDraft((prev) => confirmUploadedPhoto(prev, tempId, targetId, asset))
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Upload failed'
       reportError(message, err)
-      setDraft((prev) => ({
-        ...prev,
-        photos: prev.photos
-          .filter((photo) => !isPendingPhotoId(photo.id))
-          .map((photo) => {
-            if (photo.previewUrl) URL.revokeObjectURL(photo.previewUrl)
-            return photo
-          }),
-      }))
+      setDraft((prev) => {
+        for (const photo of prev.photos) {
+          if (isPendingPhotoId(photo.id) && photo.previewUrl) {
+            URL.revokeObjectURL(photo.previewUrl)
+          }
+        }
+        return {
+          ...prev,
+          photos: prev.photos.filter((photo) => !isPendingPhotoId(photo.id)),
+        }
+      })
     } finally {
       setLoading(false)
     }
@@ -360,7 +364,9 @@ export function CreateMemorialView() {
               <input
                 type="text"
                 value={dogA.displayName}
-                onChange={(e) => setDogA({ ...dogA, displayName: e.target.value })}
+                onChange={(e) =>
+                  setDogA((prev) => ({ ...prev, displayName: e.target.value }))
+                }
               />
             </label>
             <PhotoUploader
@@ -409,7 +415,9 @@ export function CreateMemorialView() {
               <input
                 type="text"
                 value={dogB.displayName}
-                onChange={(e) => setDogB({ ...dogB, displayName: e.target.value })}
+                onChange={(e) =>
+                  setDogB((prev) => ({ ...prev, displayName: e.target.value }))
+                }
               />
             </label>
             <PhotoUploader
