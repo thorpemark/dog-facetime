@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { AuthRedirectHandler } from './components/AuthRedirectHandler'
 import { CreateMemorialView } from './components/CreateMemorialView'
 import { EditMemorialView } from './components/EditMemorialView'
 import { LandingView } from './components/LandingView'
@@ -12,6 +13,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter basename={basename}>
+        <AuthRedirectHandler />
         <Routes>
           <Route path="/" element={<LandingView />} />
           <Route path="/create" element={<CreateMemorialView />} />
