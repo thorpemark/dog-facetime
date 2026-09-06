@@ -1,9 +1,9 @@
 name: iOS Simulator Build
 
+# Manual only — project pivoted to the web app (web/). No Mac/Xcode needed for day-to-day use.
+# Run from Actions → iOS Simulator Build → Run workflow when you have a Mac and want to verify the native app.
 on:
-  push:
-    branches: [main, "cursor/**"]
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
