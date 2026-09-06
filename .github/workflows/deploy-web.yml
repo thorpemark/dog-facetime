@@ -1,5 +1,6 @@
 name: Deploy Web App to GitHub Pages
 
+# Primary CI for this repo — deploys web/ to https://thorpemark.github.io/dog-facetime/
 # Workflow must exist on the default branch (main) for GitHub to register it.
 on:
   push:
