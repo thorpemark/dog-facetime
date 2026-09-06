@@ -8,6 +8,11 @@ on:
     paths:
       - 'web/**'
       - '.github/workflows/deploy-web.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
 
 permissions:
@@ -16,8 +21,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -32,6 +37,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: Check Supabase secrets
+        if: github.event_name != 'pull_request'
         run: |
           if [ -z "${{ secrets.VITE_SUPABASE_URL }}" ] || [ -z "${{ secrets.VITE_SUPABASE_ANON_KEY }}" ]; then
             echo "::warning::VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY are not set."
@@ -44,6 +50,10 @@ jobs:
       - name: Install dependencies
         working-directory: web
         run: npm ci
+
+      - name: Lint
+        working-directory: web
+        run: npm run lint
 
       - name: Build for GitHub Pages
         working-directory: web
@@ -61,11 +71,13 @@ jobs:
           test -f web/dist/keyword_rules.json
 
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           path: web/dist
 
   deploy:
     needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
