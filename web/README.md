@@ -1,8 +1,6 @@
 # Memorial Call — Web App
 
-A browser-based memorial video call experience. Open it in **Safari** (iPhone/iPad) or **Chrome** (PC) — no Mac or Xcode required.
-
-Simulates FaceTiming a beloved dog who has passed away: incoming call ring, full-screen looping video, self-preview placeholder, and reactions when you speak familiar words.
+A browser-based memorial video call experience. Create personal dog memorials, upload photos, share a link with family, and call one dog or two together — no account needed.
 
 ## Quick Start (Local)
 
@@ -14,14 +12,36 @@ npm run dev
 
 Open the URL Vite prints (usually `http://localhost:5173`).
 
+Without Supabase env vars, the app runs in **demo mode** (memorials saved in `localStorage`). A banner reminds you to connect Supabase for real sharing.
+
 ### Try on Your Phone Tonight
 
 1. Run `npm run dev` on your computer.
 2. Find your computer's local IP (e.g. `192.168.1.42`).
 3. On iPhone/iPad (same Wi‑Fi), open Safari → `http://YOUR_IP:5173`
-4. Complete onboarding, tap **Start Memorial Call**, **Accept**, then allow microphone when prompted.
+4. Tap **Create a Memorial**, add photos, copy the share link, open it on your phone.
 
 > **Tip:** For HTTPS on mobile (some browsers require it for mic), use a tunnel like [ngrok](https://ngrok.com/) or deploy to GitHub Pages (below).
+
+## Supabase Setup (Sharing)
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. In the SQL Editor, paste and run [`supabase/migration.sql`](supabase/migration.sql).
+3. Copy `web/.env.example` → `web/.env` and set:
+   - `VITE_SUPABASE_URL` — Project Settings → API → Project URL
+   - `VITE_SUPABASE_ANON_KEY` — Project Settings → API → `anon` `public` key
+4. Rebuild and redeploy (`npm run build` locally, or push to `main` for GitHub Pages).
+
+After setup, memorials are stored in Supabase with public share links (`/m/:shareId`) and secret edit links (`/edit/:editToken`). Photos upload to the `memorial-photos` storage bucket.
+
+## Routes
+
+| Path | Purpose |
+|------|---------|
+| `/` | Home — create a memorial or open a link |
+| `/create` | Step-by-step memorial creation |
+| `/m/:shareId` | Public share — pick who to call, start FaceTime UI |
+| `/edit/:editToken` | Owner edit — photos, names, regenerate share link |
 
 ## Production Build
 
@@ -50,11 +70,22 @@ After the next push to `main`, the site will be live at:
 
 | Screen | What it does |
 |--------|--------------|
-| **Onboarding** | Dog name, your name, optional memorial note (saved in `localStorage`) |
-| **Home** | Start a memorial call or edit settings |
+| **Home** | Create a memorial or paste a share link |
+| **Create flow** | Memorial name → Dog 1 photos → optional Dog 2 → optional Together → copy links |
+| **Share page** | Pick who to call (when multiple dogs), optional your name |
 | **Incoming Call** | FaceTime-style ring — Accept or Decline |
-| **Active Call** | Full-screen dog video, PiP self-preview, mute/end controls |
-| **Debug Panel** | Tap 🐞 during a call to trigger reactions manually or type phrases |
+| **Active Call** | Crossfading photos with Ken Burns motion, keyword reactions, debug panel |
+| **Edit page** | Upload photos, rename dogs, regenerate share link |
+
+### Photo Playback (v1)
+
+Uploaded photos are shown with a respectful “alive” presentation:
+
+- Idle: crossfading stills with subtle Ken Burns / breathing motion
+- Reactions: alternate photos + stronger motion presets (perk / excited / calm)
+- Structure supports swapping in real MP4 clips per reaction later
+
+Without uploaded photos, placeholder MP4 clips from `public/clips/` are used.
 
 ### Behavior Flow
 
@@ -129,13 +160,17 @@ No `GITHUB_PAGES` env var needed; Vercel serves from `/`.
 ```
 web/
 ├── public/
-│   ├── clips/              # Video assets
-│   └── keyword_rules.json  # Phrase → clip mapping
+│   ├── clips/              # Fallback video assets (no photos)
+│   └── keyword_rules.json  # Phrase → reaction mapping
+├── supabase/
+│   └── migration.sql       # One-paste Supabase setup
 ├── src/
 │   ├── components/         # UI screens
-│   ├── context/            # App state
-│   ├── hooks/              # Video mixer, speech, profile
-│   └── utils/              # Keyword matching
+│   ├── context/            # Call state machine
+│   ├── hooks/              # Photo playback, speech
+│   ├── services/           # Memorial CRUD (Supabase + demo)
+│   └── utils/              # Keyword matching, motion presets
+├── .env.example
 ├── index.html
 ├── vite.config.ts
 └── package.json

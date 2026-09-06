@@ -46,13 +46,15 @@ See the sections below for iOS-specific details (clips, keywords, CI).
 
 ## Web App Features
 
-- Incoming call screen → Accept
-- Full-screen dog video (idle loop) with crossfade reactions
-- Mute / End controls, self-preview placeholder
-- Web Speech API keyword listening (with debug fallback on desktop)
-- Onboarding stored in `localStorage` (dog name, owner name, memorial note)
-- Configurable `keyword_rules.json` → clip mapping
-- Placeholder MP4s bundled out of the box
+- Create personal memorials with 1–3 call targets (Dog A, Dog B, Together)
+- Upload photos; crossfading Ken Burns playback during calls
+- Share links for family (`/m/:shareId`) — no account needed
+- Secret edit links (`/edit/:editToken`) for owners
+- Incoming call → Accept → full-screen memorial call UI
+- Web Speech API keyword listening (debug panel fallback)
+- Supabase backend with localStorage demo mode when env vars are missing
+- Configurable `keyword_rules.json` → reaction mapping
+- GitHub Pages deploy at `/dog-facetime/` base path
 
 ## iOS App — Quick Start
 
@@ -168,12 +170,25 @@ Download artifacts from GitHub → **Actions** → select run → **Artifacts**.
 
 ## TODO / Next Steps
 
-- [ ] Photo upload for personalized clip generation pipeline
+- [x] Photo upload for memorial sharing (Supabase + demo mode)
+- [x] Share links for family (`/m/:shareId`)
+- [ ] Real AI video generation from photos (v2)
 - [ ] Porcupine wake-word integration (iOS) for faster keyword detection
 - [ ] Custom ringtone / memorial sound
 - [ ] True front-camera PiP preview (currently a placeholder)
 - [ ] Clip crossfade duration settings
 - [ ] Export/share memorial moment snapshots
+
+## Supabase Setup (Web Sharing)
+
+See **[`web/README.md`](web/README.md)** for full details. Summary:
+
+1. Create a Supabase project
+2. Run [`web/supabase/migration.sql`](web/supabase/migration.sql) in the SQL editor
+3. Copy `web/.env.example` → `web/.env` with your URL and anon key
+4. Rebuild / redeploy
+
+For GitHub Pages, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as repository secrets and update the deploy workflow, or build locally with `.env` and deploy `dist/`.
 
 ## License
 

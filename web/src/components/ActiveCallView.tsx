@@ -2,7 +2,7 @@ import { useMemorialCall } from '../context/MemorialCallContext'
 import { CallControlsView } from './CallControlsView'
 import { CameraPreviewPlaceholder } from './CameraPreviewPlaceholder'
 import { DebugPanelView } from './DebugPanelView'
-import { DualVideoView } from './DualVideoView'
+import { DualMediaView } from './DualMediaView'
 
 function statusText(
   behaviorState: ReturnType<typeof useMemorialCall>['behaviorState'],
@@ -30,7 +30,7 @@ export function ActiveCallView() {
 
   return (
     <div className="screen active-call-screen">
-      <DualVideoView />
+      <DualMediaView />
 
       <div className="call-overlay">
         <header className="call-header">

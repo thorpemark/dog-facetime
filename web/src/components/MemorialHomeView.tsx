@@ -1,12 +1,23 @@
 import { useMemorialCall } from '../context/MemorialCallContext'
 
-export function HomeView() {
-  const { profile, beginIncomingCall, resetOnboarding, speechSupported } =
-    useMemorialCall()
+export function MemorialHomeView({
+  showBack,
+  onBack,
+}: {
+  showBack?: boolean
+  onBack?: () => void
+}) {
+  const { profile, beginIncomingCall, speechSupported } = useMemorialCall()
 
   return (
     <div className="screen home-screen">
       <div className="home-content">
+        {showBack && onBack && (
+          <button type="button" className="btn-text back-btn home-back" onClick={onBack}>
+            ← Choose dog
+          </button>
+        )}
+
         <div className="home-hero">
           <span className="paw-icon large">🐾</span>
           <h1>{profile.dogName}</h1>
@@ -30,10 +41,6 @@ export function HomeView() {
         >
           <span className="btn-icon">📹</span>
           Start Memorial Call
-        </button>
-
-        <button type="button" className="btn-text" onClick={resetOnboarding}>
-          Edit Memorial
         </button>
       </div>
     </div>
