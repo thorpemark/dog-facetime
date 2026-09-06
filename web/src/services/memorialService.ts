@@ -52,13 +52,35 @@ function mapRpcTarget(t: Record<string, unknown>): CallTarget {
   }
 }
 
+function parseRpcJson(data: unknown): Record<string, unknown> {
+  if (typeof data === 'string') {
+    return JSON.parse(data) as Record<string, unknown>
+  }
+  return (data ?? {}) as Record<string, unknown>
+}
+
+function memorialPhotoPublicUrl(storagePath: string): string {
+  if (!storagePath || storagePath.startsWith('demo/')) return ''
+  const supabase = getSupabase()
+  if (!supabase) return ''
+  const { data } = supabase.storage.from('memorial-photos').getPublicUrl(storagePath)
+  return data.publicUrl
+}
+
 function mapRpcMedia(m: Record<string, unknown>): MediaAsset {
+  const storagePath = String(m.storage_path ?? m.storagePath ?? '')
+  const storedUrl = (m.public_url ?? m.publicUrl) as string | undefined
+  const publicUrl =
+    storagePath && !storagePath.startsWith('demo/')
+      ? memorialPhotoPublicUrl(storagePath)
+      : (storedUrl ?? '')
+
   return {
-    id: m.id as string,
-    publicUrl: m.public_url as string,
-    storagePath: m.storage_path as string,
-    reactionTag: (m.reaction_tag as string | null) ?? null,
-    sortOrder: (m.sort_order as number) ?? 0,
+    id: String(m.id ?? ''),
+    publicUrl,
+    storagePath,
+    reactionTag: (m.reaction_tag ?? m.reactionTag ?? null) as string | null,
+    sortOrder: Number(m.sort_order ?? m.sortOrder ?? 0),
   }
 }
 
@@ -400,8 +422,24 @@ export async function uploadPhoto(
     await supabase.storage.from('memorial-photos').remove([storagePath])
     throw new Error(formatUploadError(error))
   }
+
+  const row = parseRpcJson(data)
+  const asset = mapRpcMedia(row)
+  asset.storagePath = storagePath
+  asset.publicUrl = memorialPhotoPublicUrl(storagePath)
+
+  if (!asset.id) {
+    await supabase.storage.from('memorial-photos').remove([storagePath])
+    throw new Error(
+      'Photo uploaded but registration returned no media id. Re-run web/supabase/migration.sql and try again.',
+    )
+  }
+  if (!asset.publicUrl) {
+    throw new Error('Photo uploaded but public URL could not be resolved.')
+  }
+
   return {
-    asset: mapRpcMedia(data as Record<string, unknown>),
+    asset,
     targetId: callTarget.id,
   }
 }
