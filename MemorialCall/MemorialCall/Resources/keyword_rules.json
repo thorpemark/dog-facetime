@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "idleClip": "idle.mp4",
+  "rules": [
+    {
+      "id": "name",
+      "phrases": ["{dogName}", "biscuit"],
+      "clipFileName": "react_biscuit.mp4",
+      "priority": 10,
+      "description": "Dog Name"
+    },
+    {
+      "id": "walk",
+      "phrases": ["walk", "go for a walk", "wanna walk"],
+      "clipFileName": "react_walk.mp4",
+      "priority": 8,
+      "description": "Walk"
+    },
+    {
+      "id": "treat",
+      "phrases": ["treat", "cookie", "snack"],
+      "clipFileName": "react_treat.mp4",
+      "priority": 8,
+      "description": "Treat"
+    },
+    {
+      "id": "good",
+      "phrases": ["good boy", "good girl", "good dog", "who's a good"],
+      "clipFileName": "react_good.mp4",
+      "priority": 7,
+      "description": "Good Boy/Girl"
+    },
+    {
+      "id": "no",
+      "phrases": ["no", "no no", "stop that"],
+      "clipFileName": "react_no.mp4",
+      "priority": 6,
+      "description": "No"
+    },
+    {
+      "id": "come",
+      "phrases": ["come here", "come on", "c'mere"],
+      "clipFileName": "react_come.mp4",
+      "priority": 7,
+      "description": "Come Here"
+    },
+    {
+      "id": "owner",
+      "phrases": ["{ownerName}"],
+      "clipFileName": "react_owner.mp4",
+      "priority": 9,
+      "description": "Owner Name"
+    }
+  ]
+}

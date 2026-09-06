@@ -1,0 +1,485 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000010000000000000001 /* MemorialCallApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000001 /* MemorialCallApp.swift */; };
+		A10000010000000000000002 /* CallState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000002 /* CallState.swift */; };
+		A10000010000000000000003 /* DogProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000003 /* DogProfile.swift */; };
+		A10000010000000000000004 /* KeywordRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000004 /* KeywordRule.swift */; };
+		A10000010000000000000005 /* ProfileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000005 /* ProfileStore.swift */; };
+		A10000010000000000000006 /* KeywordRulesLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006 /* KeywordRulesLoader.swift */; };
+		A10000010000000000000007 /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000007 /* AudioSessionManager.swift */; };
+		A10000010000000000000008 /* KeywordSpotter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* KeywordSpotter.swift */; };
+		A10000010000000000000009 /* VideoMixer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* VideoMixer.swift */; };
+		A1000001000000000000000A /* CallViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000A /* CallViewModel.swift */; };
+		A1000001000000000000000B /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000B /* OnboardingViewModel.swift */; };
+		A1000001000000000000000C /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000C /* RootView.swift */; };
+		A1000001000000000000000D /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000D /* OnboardingView.swift */; };
+		A1000001000000000000000E /* IncomingCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000E /* IncomingCallView.swift */; };
+		A1000001000000000000000F /* VideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000000F /* VideoPlayerView.swift */; };
+		A10000010000000000000010 /* CameraPreviewPlaceholder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* CameraPreviewPlaceholder.swift */; };
+		A10000010000000000000011 /* CallControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* CallControlsView.swift */; };
+		A10000010000000000000012 /* DebugPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000012 /* DebugPanelView.swift */; };
+		A10000010000000000000013 /* ActiveCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000013 /* ActiveCallView.swift */; };
+		A10000010000000000000014 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000014 /* Assets.xcassets */; };
+		A10000010000000000000015 /* keyword_rules.json in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000015 /* keyword_rules.json */; };
+		A10000010000000000000016 /* idle.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000016 /* idle.mp4 */; };
+		A10000010000000000000017 /* react_biscuit.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000017 /* react_biscuit.mp4 */; };
+		A10000010000000000000018 /* react_walk.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000018 /* react_walk.mp4 */; };
+		A10000010000000000000019 /* react_treat.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000019 /* react_treat.mp4 */; };
+		A1000001000000000000001A /* react_good.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000001A /* react_good.mp4 */; };
+		A1000001000000000000001B /* react_no.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000001B /* react_no.mp4 */; };
+		A1000001000000000000001C /* react_come.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000001C /* react_come.mp4 */; };
+		A1000001000000000000001D /* react_owner.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = A2000001000000000000001D /* react_owner.mp4 */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A20000010000000000000001 /* MemorialCallApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemorialCallApp.swift; sourceTree = "<group>"; };
+		A20000010000000000000002 /* CallState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallState.swift; sourceTree = "<group>"; };
+		A20000010000000000000003 /* DogProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DogProfile.swift; sourceTree = "<group>"; };
+		A20000010000000000000004 /* KeywordRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeywordRule.swift; sourceTree = "<group>"; };
+		A20000010000000000000005 /* ProfileStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStore.swift; sourceTree = "<group>"; };
+		A20000010000000000000006 /* KeywordRulesLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeywordRulesLoader.swift; sourceTree = "<group>"; };
+		A20000010000000000000007 /* AudioSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioSessionManager.swift; sourceTree = "<group>"; };
+		A20000010000000000000008 /* KeywordSpotter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeywordSpotter.swift; sourceTree = "<group>"; };
+		A20000010000000000000009 /* VideoMixer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoMixer.swift; sourceTree = "<group>"; };
+		A2000001000000000000000A /* CallViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallViewModel.swift; sourceTree = "<group>"; };
+		A2000001000000000000000B /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
+		A2000001000000000000000C /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		A2000001000000000000000D /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		A2000001000000000000000E /* IncomingCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingCallView.swift; sourceTree = "<group>"; };
+		A2000001000000000000000F /* VideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerView.swift; sourceTree = "<group>"; };
+		A20000010000000000000010 /* CameraPreviewPlaceholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewPlaceholder.swift; sourceTree = "<group>"; };
+		A20000010000000000000011 /* CallControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallControlsView.swift; sourceTree = "<group>"; };
+		A20000010000000000000012 /* DebugPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugPanelView.swift; sourceTree = "<group>"; };
+		A20000010000000000000013 /* ActiveCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveCallView.swift; sourceTree = "<group>"; };
+		A20000010000000000000014 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A20000010000000000000015 /* keyword_rules.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = keyword_rules.json; sourceTree = "<group>"; };
+		A20000010000000000000016 /* idle.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = idle.mp4; sourceTree = "<group>"; };
+		A20000010000000000000017 /* react_biscuit.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = react_biscuit.mp4; sourceTree = "<group>"; };
+		A20000010000000000000018 /* react_walk.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = react_walk.mp4; sourceTree = "<group>"; };
+		A20000010000000000000019 /* react_treat.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = react_treat.mp4; sourceTree = "<group>"; };
+		A2000001000000000000001A /* react_good.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = react_good.mp4; sourceTree = "<group>"; };
+		A2000001000000000000001B /* react_no.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = react_no.mp4; sourceTree = "<group>"; };
+		A2000001000000000000001C /* react_come.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = react_come.mp4; sourceTree = "<group>"; };
+		A2000001000000000000001D /* react_owner.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = react_owner.mp4; sourceTree = "<group>"; };
+		A2000001000000000000001E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A30000010000000000000001 /* MemorialCall.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MemorialCall.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A40000010000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A50000010000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A50000010000000000000002 /* MemorialCall */,
+				A50000010000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A50000010000000000000002 /* MemorialCall */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000001 /* MemorialCallApp.swift */,
+				A50000010000000000000004 /* Models */,
+				A50000010000000000000005 /* Services */,
+				A50000010000000000000006 /* ViewModels */,
+				A50000010000000000000007 /* Views */,
+				A50000010000000000000008 /* Resources */,
+				A20000010000000000000014 /* Assets.xcassets */,
+				A2000001000000000000001E /* Info.plist */,
+			);
+			path = MemorialCall;
+			sourceTree = "<group>";
+		};
+		A50000010000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A30000010000000000000001 /* MemorialCall.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A50000010000000000000004 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000002 /* CallState.swift */,
+				A20000010000000000000003 /* DogProfile.swift */,
+				A20000010000000000000004 /* KeywordRule.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A50000010000000000000005 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000005 /* ProfileStore.swift */,
+				A20000010000000000000006 /* KeywordRulesLoader.swift */,
+				A20000010000000000000007 /* AudioSessionManager.swift */,
+				A20000010000000000000008 /* KeywordSpotter.swift */,
+				A20000010000000000000009 /* VideoMixer.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A50000010000000000000006 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A2000001000000000000000A /* CallViewModel.swift */,
+				A2000001000000000000000B /* OnboardingViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		A50000010000000000000007 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A2000001000000000000000C /* RootView.swift */,
+				A2000001000000000000000D /* OnboardingView.swift */,
+				A2000001000000000000000E /* IncomingCallView.swift */,
+				A2000001000000000000000F /* VideoPlayerView.swift */,
+				A20000010000000000000010 /* CameraPreviewPlaceholder.swift */,
+				A20000010000000000000011 /* CallControlsView.swift */,
+				A20000010000000000000012 /* DebugPanelView.swift */,
+				A20000010000000000000013 /* ActiveCallView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A50000010000000000000008 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000015 /* keyword_rules.json */,
+				A50000010000000000000009 /* Clips */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A50000010000000000000009 /* Clips */ = {
+			isa = PBXGroup;
+			children = (
+				A20000010000000000000016 /* idle.mp4 */,
+				A20000010000000000000017 /* react_biscuit.mp4 */,
+				A20000010000000000000018 /* react_walk.mp4 */,
+				A20000010000000000000019 /* react_treat.mp4 */,
+				A2000001000000000000001A /* react_good.mp4 */,
+				A2000001000000000000001B /* react_no.mp4 */,
+				A2000001000000000000001C /* react_come.mp4 */,
+				A2000001000000000000001D /* react_owner.mp4 */,
+			);
+			path = Clips;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A60000010000000000000001 /* MemorialCall */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A80000010000000000000003 /* Build configuration list for PBXNativeTarget "MemorialCall" */;
+			buildPhases = (
+				A60000010000000000000002 /* Sources */,
+				A40000010000000000000001 /* Frameworks */,
+				A60000010000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MemorialCall;
+			productName = MemorialCall;
+			productReference = A30000010000000000000001 /* MemorialCall.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A70000010000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					A60000010000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A80000010000000000000001 /* Build configuration list for PBXProject "MemorialCall" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A50000010000000000000001;
+			productRefGroup = A50000010000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A60000010000000000000001 /* MemorialCall */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A60000010000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000010000000000000014 /* Assets.xcassets in Resources */,
+				A10000010000000000000015 /* keyword_rules.json in Resources */,
+				A10000010000000000000016 /* idle.mp4 in Resources */,
+				A10000010000000000000017 /* react_biscuit.mp4 in Resources */,
+				A10000010000000000000018 /* react_walk.mp4 in Resources */,
+				A10000010000000000000019 /* react_treat.mp4 in Resources */,
+				A1000001000000000000001A /* react_good.mp4 in Resources */,
+				A1000001000000000000001B /* react_no.mp4 in Resources */,
+				A1000001000000000000001C /* react_come.mp4 in Resources */,
+				A1000001000000000000001D /* react_owner.mp4 in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A60000010000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000010000000000000001 /* MemorialCallApp.swift in Sources */,
+				A10000010000000000000002 /* CallState.swift in Sources */,
+				A10000010000000000000003 /* DogProfile.swift in Sources */,
+				A10000010000000000000004 /* KeywordRule.swift in Sources */,
+				A10000010000000000000005 /* ProfileStore.swift in Sources */,
+				A10000010000000000000006 /* KeywordRulesLoader.swift in Sources */,
+				A10000010000000000000007 /* AudioSessionManager.swift in Sources */,
+				A10000010000000000000008 /* KeywordSpotter.swift in Sources */,
+				A10000010000000000000009 /* VideoMixer.swift in Sources */,
+				A1000001000000000000000A /* CallViewModel.swift in Sources */,
+				A1000001000000000000000B /* OnboardingViewModel.swift in Sources */,
+				A1000001000000000000000C /* RootView.swift in Sources */,
+				A1000001000000000000000D /* OnboardingView.swift in Sources */,
+				A1000001000000000000000E /* IncomingCallView.swift in Sources */,
+				A1000001000000000000000F /* VideoPlayerView.swift in Sources */,
+				A10000010000000000000010 /* CameraPreviewPlaceholder.swift in Sources */,
+				A10000010000000000000011 /* CallControlsView.swift in Sources */,
+				A10000010000000000000012 /* DebugPanelView.swift in Sources */,
+				A10000010000000000000013 /* ActiveCallView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A90000010000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A90000010000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A90000010000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MemorialCall/Info.plist;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.memorialcall.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A90000010000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MemorialCall/Info.plist;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.memorialcall.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A80000010000000000000001 /* Build configuration list for PBXProject "MemorialCall" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A90000010000000000000001 /* Debug */,
+				A90000010000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A80000010000000000000003 /* Build configuration list for PBXNativeTarget "MemorialCall" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A90000010000000000000003 /* Debug */,
+				A90000010000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A70000010000000000000001 /* Project object */;
+}
