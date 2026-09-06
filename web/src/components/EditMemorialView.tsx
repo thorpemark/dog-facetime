@@ -28,11 +28,20 @@ export function EditMemorialView() {
   const load = useCallback(async () => {
     if (!editToken) return
     setLoading(true)
+    setError(null)
     try {
-      const data = await getMemorialByEditToken(editToken)
+      let data = await getMemorialByEditToken(editToken)
       if (!data) {
         setError('Memorial not found. Check your edit link.')
         return
+      }
+      if (data.targets.length === 0) {
+        await upsertCallTarget(editToken, 'dog_a', 'Dog', 0)
+        data = await getMemorialByEditToken(editToken)
+        if (!data) {
+          setError('Memorial not found. Check your edit link.')
+          return
+        }
       }
       setMemorial(data)
       setTitle(data.title)
@@ -68,12 +77,22 @@ export function EditMemorialView() {
     void load()
   }
 
-  const handleUpload = async (target: CallTarget, files: FileList) => {
-    if (!editToken) return
+  const handleUpload = async (target: CallTarget, files: File[]) => {
+    if (!editToken || files.length === 0) return
     setSaving(true)
+    setError(null)
     try {
       for (let i = 0; i < files.length; i++) {
-        await uploadPhoto(editToken, target.id, files[i], target.media.length + i)
+        await uploadPhoto(
+          editToken,
+          {
+            kind: target.kind,
+            displayName: target.displayName.trim() || target.kind,
+            sortOrder: target.sortOrder,
+          },
+          files[i],
+          target.media.length + i,
+        )
       }
       void load()
     } catch (err) {
@@ -83,12 +102,19 @@ export function EditMemorialView() {
     }
   }
 
-  const handleDeletePhoto = async (mediaId: string) => {
-    if (!editToken) return
+  const handleDeletePhoto = async (mediaId: string, storagePath?: string) => {
+    if (!editToken || !memorial) return
     setSaving(true)
+    setError(null)
     try {
-      await deletePhoto(editToken, mediaId)
-      void load()
+      await deletePhoto(editToken, mediaId, storagePath)
+      setMemorial({
+        ...memorial,
+        targets: memorial.targets.map((target) => ({
+          ...target,
+          media: target.media.filter((m) => m.id !== mediaId),
+        })),
+      })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed')
     } finally {
@@ -240,7 +266,10 @@ export function EditMemorialView() {
             <PhotoUploader
               photos={target.media}
               onUpload={(files) => handleUpload(target, files)}
-              onDelete={handleDeletePhoto}
+              onDelete={(mediaId) => {
+                const photo = target.media.find((m) => m.id === mediaId)
+                void handleDeletePhoto(mediaId, photo?.storagePath)
+              }}
               disabled={saving}
             />
           </div>

@@ -94,32 +94,54 @@ ON CONFLICT (id) DO UPDATE SET
   file_size_limit = EXCLUDED.file_size_limit,
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
+-- SECURITY DEFINER helper so storage policies can verify edit_token without
+-- granting anon SELECT on memorials (RLS blocks direct table reads).
+CREATE OR REPLACE FUNCTION memorial_edit_token_exists(p_edit_token TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT EXISTS (SELECT 1 FROM memorials WHERE edit_token = p_edit_token);
+$$;
+
 -- Public read; uploads scoped to edit_token folder (first path segment)
+DROP POLICY IF EXISTS "memorial_photos_public_read" ON storage.objects;
 CREATE POLICY "memorial_photos_public_read"
   ON storage.objects FOR SELECT
   TO anon, authenticated
   USING (bucket_id = 'memorial-photos');
 
+DROP POLICY IF EXISTS "memorial_photos_upload_with_edit_token" ON storage.objects;
 CREATE POLICY "memorial_photos_upload_with_edit_token"
   ON storage.objects FOR INSERT
   TO anon, authenticated
   WITH CHECK (
     bucket_id = 'memorial-photos'
-    AND EXISTS (
-      SELECT 1 FROM memorials m
-      WHERE m.edit_token = (storage.foldername(name))[1]
-    )
+    AND memorial_edit_token_exists((storage.foldername(name))[1])
   );
 
+DROP POLICY IF EXISTS "memorial_photos_update_with_edit_token" ON storage.objects;
+CREATE POLICY "memorial_photos_update_with_edit_token"
+  ON storage.objects FOR UPDATE
+  TO anon, authenticated
+  USING (
+    bucket_id = 'memorial-photos'
+    AND memorial_edit_token_exists((storage.foldername(name))[1])
+  )
+  WITH CHECK (
+    bucket_id = 'memorial-photos'
+    AND memorial_edit_token_exists((storage.foldername(name))[1])
+  );
+
+DROP POLICY IF EXISTS "memorial_photos_delete_with_edit_token" ON storage.objects;
 CREATE POLICY "memorial_photos_delete_with_edit_token"
   ON storage.objects FOR DELETE
   TO anon, authenticated
   USING (
     bucket_id = 'memorial-photos'
-    AND EXISTS (
-      SELECT 1 FROM memorials m
-      WHERE m.edit_token = (storage.foldername(name))[1]
-    )
+    AND memorial_edit_token_exists((storage.foldername(name))[1])
   );
 
 -- ─── RLS on tables ────────────────────────────────────────────────────────
@@ -491,6 +513,7 @@ $$;
 
 -- ─── Grants ───────────────────────────────────────────────────────────────
 
+GRANT EXECUTE ON FUNCTION memorial_edit_token_exists(TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION create_memorial(TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION get_memorial_public(TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION get_memorial_for_edit(TEXT) TO anon, authenticated;
