@@ -35,5 +35,7 @@ struct DualVideoView: View {
                     .opacity(mixer.secondaryOpacity)
             }
         }
+        .animation(.easeInOut(duration: 0.4), value: mixer.primaryOpacity)
+        .animation(.easeInOut(duration: 0.4), value: mixer.secondaryOpacity)
     }
 }
