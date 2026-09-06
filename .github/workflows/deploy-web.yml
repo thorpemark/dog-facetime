@@ -31,6 +31,16 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
+      - name: Check Supabase secrets
+        run: |
+          if [ -z "${{ secrets.VITE_SUPABASE_URL }}" ] || [ -z "${{ secrets.VITE_SUPABASE_ANON_KEY }}" ]; then
+            echo "::warning::VITE_SUPABASE_URL and/or VITE_SUPABASE_ANON_KEY are not set."
+            echo "The site will deploy in demo mode (localStorage only, banner visible)."
+            echo "Add both secrets under Settings → Secrets and variables → Actions, then re-run this workflow."
+          else
+            echo "Supabase secrets present — building with sharing enabled."
+          fi
+
       - name: Install dependencies
         working-directory: web
         run: npm ci
@@ -46,6 +56,7 @@ jobs:
       - name: Verify build output
         run: |
           test -f web/dist/index.html
+          test -f web/dist/404.html
           test -d web/dist/clips
           test -f web/dist/keyword_rules.json
 

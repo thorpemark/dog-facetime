@@ -1,4 +1,4 @@
-/** Build app paths respecting Vite base (GitHub Pages subpath). */
+/** Full URL path including Vite base — for share/edit links and `<a href>`, not React Router. */
 export function appPath(path: string): string {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '')
   const normalized = path.startsWith('/') ? path : `/${path}`

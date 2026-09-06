@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { DemoModeBanner } from './DemoModeBanner'
-import { appPath } from '../lib/urls'
 
 export function LandingView() {
   const navigate = useNavigate()
@@ -26,7 +25,7 @@ export function LandingView() {
 
     const shareId = trimmed.replace(/^\/m\//, '').split('/')[0]
     if (shareId) {
-      navigate(appPath(`/m/${shareId}`))
+      navigate(`/m/${shareId}`)
     }
   }
 
@@ -43,14 +42,10 @@ export function LandingView() {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="btn-call"
-          onClick={() => navigate(appPath('/create'))}
-        >
+        <Link to="/create" className="btn-call">
           <span className="btn-icon">✨</span>
           Create a Memorial
-        </button>
+        </Link>
 
         <div className="open-link-section">
           <p className="section-label">Open a link</p>

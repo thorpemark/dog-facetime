@@ -184,6 +184,8 @@ button {
   background: rgba(255, 255, 255, 0.15);
   font-weight: 600;
   font-size: 1.05rem;
+  text-decoration: none;
+  color: inherit;
 }
 
 .btn-text {

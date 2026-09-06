@@ -55,10 +55,16 @@ npm run preview  # serve dist locally
 
 A workflow at [`.github/workflows/deploy-web.yml`](../.github/workflows/deploy-web.yml) builds and deploys `web/` on every push to `main`.
 
-**One-time repo settings (2 clicks):**
+**One-time repo settings:**
 
-1. GitHub → **Settings** → **Pages**
-2. Under **Build and deployment**, set **Source** to **GitHub Actions**
+1. GitHub → **Settings** → **Pages** → set **Source** to **GitHub Actions**
+2. GitHub → **Settings** → **Secrets and variables** → **Actions** → add:
+   - `VITE_SUPABASE_URL` — Supabase Project Settings → API → Project URL
+   - `VITE_SUPABASE_ANON_KEY` — Supabase Project Settings → API → `anon` `public` key
+
+If these secrets were added **after** the first deploy, the live site stays in demo mode until you **re-run** the workflow: **Actions** → **Deploy Web App to GitHub Pages** → **Run workflow** (or push a new commit to `main`).
+
+The build sets `GITHUB_PAGES=true` so Vite uses base `/dog-facetime/` and emits `404.html` (SPA fallback for `/create`, `/m/:id`, `/edit/:token`).
 
 After the next push to `main`, the site will be live at:
 
