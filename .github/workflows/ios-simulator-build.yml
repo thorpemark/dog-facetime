@@ -1,0 +1,60 @@
+name: iOS Simulator Build
+
+on:
+  push:
+    branches: [main, "cursor/**"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    env:
+      PROJECT_PATH: MemorialCall/MemorialCall.xcodeproj
+      SCHEME: MemorialCall
+      DERIVED_DATA_PATH: ${{ github.workspace }}/build/DerivedData
+      BUILD_LOG_PATH: ${{ github.workspace }}/build/xcodebuild.log
+      APP_PATH: build/DerivedData/Build/Products/Debug-iphonesimulator/MemorialCall.app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Xcode version
+        run: xcodebuild -version
+
+      - name: Confirm project path and scheme
+        run: |
+          echo "Project: ${PROJECT_PATH}"
+          echo "Scheme:  ${SCHEME}"
+          xcodebuild -project "${PROJECT_PATH}" -list
+
+      - name: Build for iOS Simulator
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild build \
+            -project "${PROJECT_PATH}" \
+            -scheme "${SCHEME}" \
+            -destination "generic/platform=iOS Simulator" \
+            -configuration Debug \
+            -derivedDataPath "${DERIVED_DATA_PATH}" \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee "${BUILD_LOG_PATH}"
+
+      - name: Upload xcodebuild log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: build/xcodebuild.log
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload MemorialCall.app
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MemorialCall-iphonesimulator
+          path: ${{ env.APP_PATH }}
+          retention-days: 14

@@ -105,6 +105,28 @@ MemorialCall/
     └── Info.plist
 ```
 
+## CI / no Mac
+
+You don't need a Mac to verify the project builds. GitHub Actions compiles it on `macos-latest` for the iOS Simulator — no signing secrets or Apple Developer account required.
+
+| Setting | Value |
+|---------|-------|
+| **Workflow** | [`.github/workflows/ios-simulator-build.yml`](.github/workflows/ios-simulator-build.yml) |
+| **Xcode project** | `MemorialCall/MemorialCall.xcodeproj` |
+| **Scheme** | `MemorialCall` |
+| **Destination** | `generic/platform=iOS Simulator` |
+
+The workflow runs on pushes to `main` / `cursor/**` and on pull requests. Each run:
+
+1. Lists available schemes (confirms project + scheme resolve)
+2. Builds with `CODE_SIGNING_ALLOWED=NO` (simulator-only, no certificates)
+3. On **success** — uploads `MemorialCall.app` as artifact **`MemorialCall-iphonesimulator`**
+4. On **failure** — uploads **`xcodebuild-log`** with the full build output
+
+**Download the build:** GitHub → **Actions** → select the workflow run → **Artifacts**.
+
+> The artifact is a **simulator** build. It runs in Xcode Simulator on a Mac; it cannot be installed on a physical iPhone without a device-targeted rebuild.
+
 ## Simulator Tips
 
 - The Simulator has limited microphone support. Use the **Debug Panel** (ladybug button) to trigger reactions manually.
