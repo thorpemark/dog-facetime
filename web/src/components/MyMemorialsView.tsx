@@ -23,13 +23,13 @@ function formatDate(iso: string): string {
 
 export function MyMemorialsView() {
   const navigate = useNavigate()
-  const { user, loading: authLoading, authAvailable } = useAuth()
+  const { user, session, loading: authLoading, authAvailable } = useAuth()
   const [memorials, setMemorials] = useState<MemorialSummary[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const loadMemorials = useCallback(async () => {
-    if (!user) return
+    if (!session) return
     setLoading(true)
     setError(null)
     try {
@@ -37,14 +37,15 @@ export function MyMemorialsView() {
       setMemorials(list)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load memorials')
+      setMemorials([])
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [session])
 
   useEffect(() => {
-    if (user) loadMemorials()
-  }, [user, loadMemorials])
+    if (!authLoading && session) loadMemorials()
+  }, [authLoading, session, loadMemorials])
 
   return (
     <div className="screen form-screen">
@@ -79,17 +80,24 @@ export function MyMemorialsView() {
           </div>
         )}
 
-        {user && error && <p className="form-error">{error}</p>}
-
         {user && loading && <p className="loading-hint">Loading your memorials…</p>}
 
-        {user && !loading && memorials.length === 0 && !error && (
+        {user && !loading && error && (
           <div className="empty-state">
             <span className="paw-icon large">🐾</span>
-            <h2>No memorials yet</h2>
+            <h2>Could not load memorials</h2>
+            <p className="form-error">{error}</p>
+            <Link to="/create" className="btn-call">Create a memorial</Link>
+          </div>
+        )}
+
+        {user && !loading && !error && memorials.length === 0 && (
+          <div className="empty-state">
+            <span className="paw-icon large">🐾</span>
+            <h2>No memorials yet — create one</h2>
             <p>
-              Create a memorial while signed in, or sign in after creating one to claim it
-              from this browser.
+              Memorials you create while signed in appear here. You can also sign in after
+              creating one to claim it from this browser.
             </p>
             <Link to="/create" className="btn-call">Create a memorial</Link>
           </div>

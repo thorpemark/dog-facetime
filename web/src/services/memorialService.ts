@@ -75,6 +75,24 @@ function parseRpcJson(data: unknown): Record<string, unknown> {
   return (data ?? {}) as Record<string, unknown>
 }
 
+function parseRpcJsonArray(data: unknown): Record<string, unknown>[] {
+  if (data === null || data === undefined) return []
+  if (typeof data === 'string') {
+    const parsed = JSON.parse(data) as unknown
+    return Array.isArray(parsed) ? (parsed as Record<string, unknown>[]) : []
+  }
+  return Array.isArray(data) ? (data as Record<string, unknown>[]) : []
+}
+
+function formatRpcError(err: unknown, fallback: string): string {
+  if (err instanceof Error) return err.message || fallback
+  if (err && typeof err === 'object' && 'message' in err) {
+    const message = String((err as { message: unknown }).message)
+    return message || fallback
+  }
+  return fallback
+}
+
 function memorialPhotoPublicUrl(storagePath: string): string {
   if (!storagePath || storagePath.startsWith('demo/')) return ''
   const supabase = getSupabase()
@@ -537,10 +555,23 @@ export async function listMyMemorials(): Promise<MemorialSummary[]> {
   if (isDemoMode()) return []
 
   const supabase = getSupabase()!
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession()
+  if (sessionError) {
+    throw new Error(formatRpcError(sessionError, 'Could not read sign-in session'))
+  }
+  if (!session) {
+    throw new Error('Not signed in')
+  }
+
   const { data, error } = await supabase.rpc('list_my_memorials')
-  if (error) throw error
-  const items = (data as Record<string, unknown>[] | null) ?? []
-  return items.map(mapRpcMemorialSummary)
+  if (error) {
+    throw new Error(formatRpcError(error, 'Failed to load memorials'))
+  }
+
+  return parseRpcJsonArray(data).map(mapRpcMemorialSummary)
 }
 
 export async function claimMemorial(editToken: string): Promise<MemorialSummary> {
