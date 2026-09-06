@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { CallTargetKind, Memorial } from '../types/memorial'
 import {
@@ -14,10 +14,47 @@ import { PhotoUploader } from './PhotoUploader'
 
 type Step = 'title' | 'dog_a' | 'dog_b_choice' | 'dog_b' | 'together_choice' | 'together' | 'done'
 
+interface DraftPhoto {
+  id: string
+  publicUrl: string
+  storagePath?: string
+  previewUrl?: string
+}
+
 interface TargetDraft {
   id: string
   displayName: string
-  photos: { id: string; publicUrl: string; storagePath?: string }[]
+  photos: DraftPhoto[]
+}
+
+function isPendingPhotoId(id: string): boolean {
+  return id.startsWith('pending-')
+}
+
+function confirmUploadedPhoto(
+  prev: TargetDraft,
+  tempId: string,
+  targetId: string,
+  asset: { id: string; publicUrl: string; storagePath?: string },
+): TargetDraft {
+  const pending = prev.photos.find((p) => p.id === tempId)
+  if (pending?.previewUrl) URL.revokeObjectURL(pending.previewUrl)
+
+  const confirmed: DraftPhoto = {
+    id: asset.id,
+    publicUrl: asset.publicUrl,
+    storagePath: asset.storagePath,
+  }
+
+  const withoutTemp = prev.photos.filter((p) => p.id !== tempId)
+  const alreadyPresent = withoutTemp.some((p) => p.id === asset.id)
+  const photos = alreadyPresent ? withoutTemp : [...withoutTemp, confirmed]
+
+  return {
+    ...prev,
+    id: targetId || prev.id,
+    photos,
+  }
 }
 
 export function CreateMemorialView() {
@@ -26,18 +63,33 @@ export function CreateMemorialView() {
   const [title, setTitle] = useState('')
   const [note, setNote] = useState('')
   const [memorial, setMemorial] = useState<Memorial | null>(null)
+  const memorialRef = useRef<Memorial | null>(null)
   const [dogA, setDogA] = useState<TargetDraft>({ id: '', displayName: '', photos: [] })
   const [dogB, setDogB] = useState<TargetDraft>({ id: '', displayName: '', photos: [] })
-  const [together, setTogether] = useState<TargetDraft>({ id: '', displayName: 'Together', photos: [] })
+  const [together, setTogether] = useState<TargetDraft>({
+    id: '',
+    displayName: 'Together',
+    photos: [],
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const ensureMemorial = async (): Promise<Memorial> => {
-    if (memorial) return memorial
+  const storeMemorial = useCallback((next: Memorial) => {
+    memorialRef.current = next
+    setMemorial(next)
+  }, [])
+
+  const ensureMemorial = useCallback(async (): Promise<Memorial> => {
+    if (memorialRef.current) return memorialRef.current
     const created = await createMemorial({ title, note })
-    setMemorial(created)
+    storeMemorial(created)
     return created
-  }
+  }, [note, storeMemorial, title])
+
+  const reportError = useCallback((message: string, cause?: unknown) => {
+    console.error('[CreateMemorial] upload error:', message, cause)
+    setError(message)
+  }, [])
 
   const saveTarget = async (
     kind: CallTargetKind,
@@ -45,7 +97,10 @@ export function CreateMemorialView() {
     sortOrder: number,
   ): Promise<string> => {
     const m = await ensureMemorial()
-    const target = await upsertCallTarget(m.editToken!, kind, displayName, sortOrder)
+    if (!m.editToken) {
+      throw new Error('Memorial is missing an edit token. Refresh and try again.')
+    }
+    const target = await upsertCallTarget(m.editToken, kind, displayName, sortOrder)
     return target.id
   }
 
@@ -53,40 +108,64 @@ export function CreateMemorialView() {
     kind: CallTargetKind,
     displayName: string,
     sortOrder: number,
-    files: FileList,
-    currentPhotos: { id: string; publicUrl: string; storagePath?: string }[],
-    setDraft: (d: TargetDraft) => void,
-    draft: TargetDraft,
+    files: File[],
+    setDraft: React.Dispatch<React.SetStateAction<TargetDraft>>,
   ) => {
+    if (files.length === 0) {
+      reportError('No photo file was received. Please try selecting the image again.')
+      return
+    }
+
     setLoading(true)
     setError(null)
+
     try {
       const m = await ensureMemorial()
-      const newPhotos = [...currentPhotos]
-      let resolvedTargetId = draft.id
-      for (let i = 0; i < files.length; i++) {
-        const { asset, targetId } = await uploadPhoto(
-          m.editToken!,
-          { kind, displayName, sortOrder },
-          files[i],
-          currentPhotos.length + i,
-        )
-        resolvedTargetId = targetId
-        newPhotos.push({
-          id: asset.id,
-          publicUrl: asset.publicUrl,
-          storagePath: asset.storagePath,
-        })
+      const editToken = m.editToken
+      if (!editToken) {
+        throw new Error('Memorial is not ready yet. Go back and save the memorial name first.')
       }
-      setDraft({
-        ...draft,
-        id: resolvedTargetId,
-        displayName,
-        photos: newPhotos,
-      })
-      if (!memorial) setMemorial(m)
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const tempId = `pending-${crypto.randomUUID()}`
+        const previewUrl = URL.createObjectURL(file)
+
+        let mediaSortOrder = 0
+        setDraft((prev) => {
+          mediaSortOrder = prev.photos.filter((p) => !isPendingPhotoId(p.id)).length
+          return {
+            ...prev,
+            photos: [
+              ...prev.photos,
+              { id: tempId, publicUrl: previewUrl, previewUrl },
+            ],
+          }
+        })
+
+        const { asset, targetId } = await uploadPhoto(
+          editToken,
+          { kind, displayName, sortOrder },
+          file,
+          mediaSortOrder + i,
+        )
+
+        setDraft((prev) => confirmUploadedPhoto(prev, tempId, targetId, asset))
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed')
+      const message = err instanceof Error ? err.message : 'Upload failed'
+      reportError(message, err)
+      setDraft((prev) => {
+        for (const photo of prev.photos) {
+          if (isPendingPhotoId(photo.id) && photo.previewUrl) {
+            URL.revokeObjectURL(photo.previewUrl)
+          }
+        }
+        return {
+          ...prev,
+          photos: prev.photos.filter((photo) => !isPendingPhotoId(photo.id)),
+        }
+      })
     } finally {
       setLoading(false)
     }
@@ -94,22 +173,36 @@ export function CreateMemorialView() {
 
   const handleDeletePhoto = async (
     mediaId: string,
-    setDraft: (draft: TargetDraft) => void,
-    draft: TargetDraft,
+    setDraft: React.Dispatch<React.SetStateAction<TargetDraft>>,
   ) => {
     setLoading(true)
     setError(null)
     try {
       const m = await ensureMemorial()
-      const photo = draft.photos.find((p) => p.id === mediaId)
-      await deletePhoto(m.editToken!, mediaId, photo?.storagePath)
-      setDraft({
-        ...draft,
-        photos: draft.photos.filter((p) => p.id !== mediaId),
+      if (!m.editToken) {
+        throw new Error('Memorial is not ready yet.')
+      }
+
+      let storagePath: string | undefined
+      setDraft((prev) => {
+        storagePath = prev.photos.find((p) => p.id === mediaId)?.storagePath
+        return prev
       })
-      if (!memorial) setMemorial(m)
+
+      if (!isPendingPhotoId(mediaId)) {
+        await deletePhoto(m.editToken, mediaId, storagePath)
+      }
+
+      setDraft((prev) => {
+        const removed = prev.photos.find((p) => p.id === mediaId)
+        if (removed?.previewUrl) URL.revokeObjectURL(removed.previewUrl)
+        return {
+          ...prev,
+          photos: prev.photos.filter((p) => p.id !== mediaId),
+        }
+      })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed')
+      reportError(err instanceof Error ? err.message : 'Delete failed', err)
     } finally {
       setLoading(false)
     }
@@ -125,14 +218,15 @@ export function CreateMemorialView() {
       setDogA({ id: targetId, displayName: 'Dog', photos: [] })
       setStep('dog_a')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create memorial')
+      reportError(err instanceof Error ? err.message : 'Failed to create memorial', err)
     } finally {
       setLoading(false)
     }
   }
 
   const continueFromDogA = async () => {
-    if (dogA.photos.length === 0) {
+    const confirmedPhotos = dogA.photos.filter((p) => !isPendingPhotoId(p.id))
+    if (confirmedPhotos.length === 0) {
       setError('Please add at least one photo.')
       return
     }
@@ -142,7 +236,7 @@ export function CreateMemorialView() {
       await saveTarget('dog_a', name, 0)
       setStep('dog_b_choice')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save')
+      reportError(err instanceof Error ? err.message : 'Failed to save', err)
     } finally {
       setLoading(false)
     }
@@ -155,14 +249,15 @@ export function CreateMemorialView() {
       setDogB({ id: targetId, displayName: 'Dog 2', photos: [] })
       setStep('dog_b')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed')
+      reportError(err instanceof Error ? err.message : 'Failed', err)
     } finally {
       setLoading(false)
     }
   }
 
   const continueFromDogB = async () => {
-    if (dogB.photos.length === 0) {
+    const confirmedPhotos = dogB.photos.filter((p) => !isPendingPhotoId(p.id))
+    if (confirmedPhotos.length === 0) {
       setError('Please add at least one photo.')
       return
     }
@@ -171,7 +266,7 @@ export function CreateMemorialView() {
       await saveTarget('dog_b', dogB.displayName.trim() || 'Dog 2', 1)
       setStep('together_choice')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed')
+      reportError(err instanceof Error ? err.message : 'Failed', err)
     } finally {
       setLoading(false)
     }
@@ -184,14 +279,15 @@ export function CreateMemorialView() {
       setTogether({ id: targetId, displayName: 'Together', photos: [] })
       setStep('together')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed')
+      reportError(err instanceof Error ? err.message : 'Failed', err)
     } finally {
       setLoading(false)
     }
   }
 
   const finishTogether = async () => {
-    if (together.photos.length === 0) {
+    const confirmedPhotos = together.photos.filter((p) => !isPendingPhotoId(p.id))
+    if (confirmedPhotos.length === 0) {
       setError('Please add at least one photo.')
       return
     }
@@ -200,13 +296,16 @@ export function CreateMemorialView() {
       await saveTarget('together', together.displayName.trim() || 'Together', 2)
       setStep('done')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed')
+      reportError(err instanceof Error ? err.message : 'Failed', err)
     } finally {
       setLoading(false)
     }
   }
 
   const skipToDone = () => setStep('done')
+
+  const confirmedPhotoCount = (draft: TargetDraft) =>
+    draft.photos.filter((p) => !isPendingPhotoId(p.id)).length
 
   return (
     <div className="screen form-screen">
@@ -219,7 +318,11 @@ export function CreateMemorialView() {
           <h1>Create Memorial</h1>
         </header>
 
-        {error && <p className="form-error">{error}</p>}
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
 
         {step === 'title' && (
           <div className="form-step">
@@ -261,35 +364,29 @@ export function CreateMemorialView() {
               <input
                 type="text"
                 value={dogA.displayName}
-                onChange={(e) => setDogA({ ...dogA, displayName: e.target.value })}
+                onChange={(e) =>
+                  setDogA((prev) => ({ ...prev, displayName: e.target.value }))
+                }
               />
             </label>
             <PhotoUploader
               photos={dogA.photos.map((p) => ({
                 id: p.id,
                 publicUrl: p.publicUrl,
-                storagePath: '',
+                storagePath: p.storagePath ?? '',
                 reactionTag: null,
                 sortOrder: 0,
               }))}
               onUpload={(files) =>
-                handleUpload(
-                  'dog_a',
-                  dogA.displayName.trim() || 'Dog',
-                  0,
-                  files,
-                  dogA.photos,
-                  setDogA,
-                  dogA,
-                )
+                handleUpload('dog_a', dogA.displayName.trim() || 'Dog', 0, files, setDogA)
               }
-              onDelete={(mediaId) => handleDeletePhoto(mediaId, setDogA, dogA)}
+              onDelete={(mediaId) => handleDeletePhoto(mediaId, setDogA)}
               disabled={loading}
             />
             <button
               type="button"
               className="btn-call"
-              disabled={loading || dogA.photos.length === 0}
+              disabled={loading || confirmedPhotoCount(dogA) === 0}
               onClick={continueFromDogA}
             >
               Continue
@@ -318,35 +415,29 @@ export function CreateMemorialView() {
               <input
                 type="text"
                 value={dogB.displayName}
-                onChange={(e) => setDogB({ ...dogB, displayName: e.target.value })}
+                onChange={(e) =>
+                  setDogB((prev) => ({ ...prev, displayName: e.target.value }))
+                }
               />
             </label>
             <PhotoUploader
               photos={dogB.photos.map((p) => ({
                 id: p.id,
                 publicUrl: p.publicUrl,
-                storagePath: '',
+                storagePath: p.storagePath ?? '',
                 reactionTag: null,
                 sortOrder: 0,
               }))}
               onUpload={(files) =>
-                handleUpload(
-                  'dog_b',
-                  dogB.displayName.trim() || 'Dog 2',
-                  1,
-                  files,
-                  dogB.photos,
-                  setDogB,
-                  dogB,
-                )
+                handleUpload('dog_b', dogB.displayName.trim() || 'Dog 2', 1, files, setDogB)
               }
-              onDelete={(mediaId) => handleDeletePhoto(mediaId, setDogB, dogB)}
+              onDelete={(mediaId) => handleDeletePhoto(mediaId, setDogB)}
               disabled={loading}
             />
             <button
               type="button"
               className="btn-call"
-              disabled={loading || dogB.photos.length === 0}
+              disabled={loading || confirmedPhotoCount(dogB) === 0}
               onClick={continueFromDogB}
             >
               Continue
@@ -374,7 +465,7 @@ export function CreateMemorialView() {
               photos={together.photos.map((p) => ({
                 id: p.id,
                 publicUrl: p.publicUrl,
-                storagePath: '',
+                storagePath: p.storagePath ?? '',
                 reactionTag: null,
                 sortOrder: 0,
               }))}
@@ -384,18 +475,16 @@ export function CreateMemorialView() {
                   together.displayName.trim() || 'Together',
                   2,
                   files,
-                  together.photos,
                   setTogether,
-                  together,
                 )
               }
-              onDelete={(mediaId) => handleDeletePhoto(mediaId, setTogether, together)}
+              onDelete={(mediaId) => handleDeletePhoto(mediaId, setTogether)}
               disabled={loading}
             />
             <button
               type="button"
               className="btn-call"
-              disabled={loading || together.photos.length === 0}
+              disabled={loading || confirmedPhotoCount(together) === 0}
               onClick={finishTogether}
             >
               Finish

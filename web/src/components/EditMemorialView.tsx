@@ -77,8 +77,8 @@ export function EditMemorialView() {
     void load()
   }
 
-  const handleUpload = async (target: CallTarget, files: FileList) => {
-    if (!editToken) return
+  const handleUpload = async (target: CallTarget, files: File[]) => {
+    if (!editToken || files.length === 0) return
     setSaving(true)
     setError(null)
     try {

@@ -3,7 +3,8 @@ import type { MediaAsset } from '../types/memorial'
 
 interface PhotoUploaderProps {
   photos: MediaAsset[]
-  onUpload: (files: FileList) => void
+  /** Receives a snapshot of selected files (not a live FileList). */
+  onUpload: (files: File[]) => void | Promise<void>
   onDelete: (mediaId: string) => void
   disabled?: boolean
 }
@@ -52,8 +53,10 @@ export function PhotoUploader({
         multiple
         hidden
         onChange={(e) => {
-          if (e.target.files?.length) onUpload(e.target.files)
-          e.target.value = ''
+          const input = e.target
+          const selected = input.files ? Array.from(input.files) : []
+          input.value = ''
+          if (selected.length > 0) void onUpload(selected)
         }}
       />
       {photos.length === 0 && (
