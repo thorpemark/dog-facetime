@@ -1,10 +1,60 @@
 # Memorial Call
 
-A gentle iOS app that simulates FaceTiming a beloved dog who has passed away. The experience feels like a real FaceTime call: an incoming ring, full-screen video of your companion, a small self-preview, and familiar reactions when you speak their name or favorite phrases.
+A gentle memorial experience that simulates FaceTiming a beloved dog who has passed away — full-screen video, familiar reactions when you speak their name, and a warm call-like UI.
 
-Built with **SwiftUI** and **AVFoundation**. Targets **iOS 17+**.
+## Run Today (No Mac Required)
 
-## Quick Start
+Use the **web app** in any modern browser:
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Open the local URL on your PC, or on iPhone/iPad Safari at `http://YOUR_COMPUTER_IP:5173` (same Wi‑Fi).
+
+See **[`web/README.md`](web/README.md)** for phone setup, speech recognition tips, and deployment.
+
+### Deployed URL (GitHub Pages)
+
+After enabling **Pages → Source: GitHub Actions** in repo settings, pushes to `main` publish:
+
+**https://thorpemark.github.io/dog-facetime/**
+
+## Native iOS App (Future / With Mac)
+
+The SwiftUI app in [`MemorialCall/`](MemorialCall/) targets iOS 17+ and requires Xcode on a Mac.
+
+```bash
+# Open in Xcode 15+
+open MemorialCall/MemorialCall.xcodeproj
+```
+
+See the sections below for iOS-specific details (clips, keywords, CI).
+
+---
+
+## Repository Layout
+
+| Path | Purpose |
+|------|---------|
+| **`web/`** | **Run now** — Vite + React web app for Safari/Chrome (PC, iPhone, iPad) |
+| **`MemorialCall/`** | Native iOS app — requires Mac + Xcode |
+| **`.github/workflows/deploy-web.yml`** | Builds & deploys `web/` to GitHub Pages |
+| **`.github/workflows/ios-simulator-build.yml`** | CI build for iOS Simulator (no Mac needed to verify) |
+
+## Web App Features
+
+- Incoming call screen → Accept
+- Full-screen dog video (idle loop) with crossfade reactions
+- Mute / End controls, self-preview placeholder
+- Web Speech API keyword listening (with debug fallback on desktop)
+- Onboarding stored in `localStorage` (dog name, owner name, memorial note)
+- Configurable `keyword_rules.json` → clip mapping
+- Placeholder MP4s bundled out of the box
+
+## iOS App — Quick Start
 
 1. Clone this repository.
 2. Open `MemorialCall/MemorialCall.xcodeproj` in Xcode 15 or later.
@@ -13,7 +63,7 @@ Built with **SwiftUI** and **AVFoundation**. Targets **iOS 17+**.
 
 On first launch you'll complete a short onboarding (dog name, your name, optional memorial note), then tap **Start Memorial Call** to begin.
 
-## Using the App
+## Using the iOS App
 
 | Screen | What it does |
 |--------|--------------|
@@ -36,7 +86,7 @@ idle → listen → react → cooldown → idle
 
 ## Replacing Placeholder Clips
 
-Placeholder colored videos ship in `MemorialCall/Resources/Clips/`. Replace them with real footage of your dog.
+Placeholder colored videos ship in both `web/public/clips/` and `MemorialCall/MemorialCall/Resources/Clips/`. Replace them with real footage of your dog.
 
 ### Naming Convention
 
@@ -56,11 +106,10 @@ Placeholder colored videos ship in `MemorialCall/Resources/Clips/`. Replace them
 - **Format:** H.264 MP4, 720×1280 (portrait) recommended
 - **Idle:** 3–6 seconds, designed to loop seamlessly
 - **Reactions:** 1–3 seconds, natural start/end (crossfade handles transitions)
-- After adding files in Finder, they appear automatically in Xcode (folder reference is synced)
 
 ## Keyword → Clip Mapping
 
-Rules live in `MemorialCall/Resources/keyword_rules.json`:
+Rules live in `web/public/keyword_rules.json` (web) and `MemorialCall/MemorialCall/Resources/keyword_rules.json` (iOS):
 
 ```json
 {
@@ -78,64 +127,49 @@ Rules live in `MemorialCall/Resources/keyword_rules.json`:
 
 ## Microphone & Speech Recognition
 
+### Web
+
+Uses the **Web Speech API**. Chrome and Safari support it; Firefox does not — use the debug panel instead.
+
+### iOS
+
 The app uses Apple's **Speech** framework with on-device recognition when available. Privacy strings are in `Info.plist`:
 
 - `NSMicrophoneUsageDescription`
 - `NSSpeechRecognitionUsageDescription`
 
-### Picovoice Porcupine (Future)
+## CI / No Mac
 
-For lower-latency wake-word detection, see `KeywordSpotter.swift` — it documents where to plug in [Picovoice Porcupine](https://picovoice.ai/platform/porcupine/) as an alternative or supplement to full STT.
+### Web (GitHub Pages)
 
-## Project Structure
+Workflow: [`.github/workflows/deploy-web.yml`](.github/workflows/deploy-web.yml)
 
-```
-MemorialCall/
-├── MemorialCall.xcodeproj
-└── MemorialCall/
-    ├── MemorialCallApp.swift       # App entry point
-    ├── Models/                     # CallState, DogProfile, KeywordRule
-    ├── Services/                   # VideoMixer, KeywordSpotter, ProfileStore
-    ├── ViewModels/                 # CallViewModel, OnboardingViewModel
-    ├── Views/                      # SwiftUI screens
-    ├── Resources/
-    │   ├── keyword_rules.json      # Phrase → clip mapping
-    │   └── Clips/                  # Video assets
-    ├── Assets.xcassets
-    └── Info.plist
-```
+**One-time setup:** GitHub → Settings → Pages → Source → **GitHub Actions**
 
-## CI / no Mac
+### iOS Simulator Build
 
-You don't need a Mac to verify the project builds. GitHub Actions compiles it on `macos-latest` for the iOS Simulator — no signing secrets or Apple Developer account required.
+You don't need a Mac to verify the iOS project builds. GitHub Actions compiles it on `macos-latest` for the iOS Simulator — no signing secrets required.
 
 | Setting | Value |
 |---------|-------|
 | **Workflow** | [`.github/workflows/ios-simulator-build.yml`](.github/workflows/ios-simulator-build.yml) |
 | **Xcode project** | `MemorialCall/MemorialCall.xcodeproj` |
 | **Scheme** | `MemorialCall` |
-| **Destination** | `generic/platform=iOS Simulator` |
 
-The workflow runs on pushes to `main` / `cursor/**` and on pull requests. Each run:
+Download artifacts from GitHub → **Actions** → select run → **Artifacts**.
 
-1. Lists available schemes (confirms project + scheme resolve)
-2. Builds with `CODE_SIGNING_ALLOWED=NO` (simulator-only, no certificates)
-3. On **success** — uploads `MemorialCall.app` as artifact **`MemorialCall-iphonesimulator`**
-4. On **failure** — uploads **`xcodebuild-log`** with the full build output
+> Simulator builds run in Xcode Simulator on a Mac; they cannot be installed on a physical iPhone without a device-targeted rebuild.
 
-**Download the build:** GitHub → **Actions** → select the workflow run → **Artifacts**.
+## Simulator / Browser Tips
 
-> The artifact is a **simulator** build. It runs in Xcode Simulator on a Mac; it cannot be installed on a physical iPhone without a device-targeted rebuild.
-
-## Simulator Tips
-
-- The Simulator has limited microphone support. Use the **Debug Panel** (ladybug button) to trigger reactions manually.
-- On a physical device, grant microphone and speech permissions, then speak naturally during a call.
+- **Web on desktop:** Use the 🐞 debug panel to trigger reactions, or type phrases in the debug input.
+- **Web on iPhone:** Allow microphone in Safari; speak naturally during a call.
+- **iOS Simulator:** Limited microphone — use the debug panel (ladybug button).
 
 ## TODO / Next Steps
 
 - [ ] Photo upload for personalized clip generation pipeline
-- [ ] Porcupine wake-word integration for faster keyword detection
+- [ ] Porcupine wake-word integration (iOS) for faster keyword detection
 - [ ] Custom ringtone / memorial sound
 - [ ] True front-camera PiP preview (currently a placeholder)
 - [ ] Clip crossfade duration settings
