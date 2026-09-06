@@ -49,27 +49,38 @@ export function CreateMemorialView() {
   }
 
   const handleUpload = async (
+    kind: CallTargetKind,
+    displayName: string,
+    sortOrder: number,
     targetId: string,
     files: FileList,
     currentPhotos: { id: string; publicUrl: string }[],
     setDraft: (d: TargetDraft) => void,
     draft: TargetDraft,
   ) => {
-    if (!memorial?.editToken) return
     setLoading(true)
     setError(null)
     try {
+      const m = await ensureMemorial()
+      const resolvedTargetId =
+        targetId || (await saveTarget(kind, displayName, sortOrder))
       const newPhotos = [...currentPhotos]
       for (let i = 0; i < files.length; i++) {
         const asset = await uploadPhoto(
-          memorial.editToken,
-          targetId,
+          m.editToken!,
+          resolvedTargetId,
           files[i],
           currentPhotos.length + i,
         )
         newPhotos.push({ id: asset.id, publicUrl: asset.publicUrl })
       }
-      setDraft({ ...draft, id: targetId, photos: newPhotos })
+      setDraft({
+        ...draft,
+        id: resolvedTargetId,
+        displayName,
+        photos: newPhotos,
+      })
+      if (!memorial) setMemorial(m)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
@@ -235,7 +246,16 @@ export function CreateMemorialView() {
                 sortOrder: 0,
               }))}
               onUpload={(files) =>
-                handleUpload(dogA.id, files, dogA.photos, setDogA, dogA)
+                handleUpload(
+                  'dog_a',
+                  dogA.displayName.trim() || 'Dog',
+                  0,
+                  dogA.id,
+                  files,
+                  dogA.photos,
+                  setDogA,
+                  dogA,
+                )
               }
               onDelete={() => {}}
               disabled={loading}
@@ -284,7 +304,16 @@ export function CreateMemorialView() {
                 sortOrder: 0,
               }))}
               onUpload={(files) =>
-                handleUpload(dogB.id, files, dogB.photos, setDogB, dogB)
+                handleUpload(
+                  'dog_b',
+                  dogB.displayName.trim() || 'Dog 2',
+                  1,
+                  dogB.id,
+                  files,
+                  dogB.photos,
+                  setDogB,
+                  dogB,
+                )
               }
               onDelete={() => {}}
               disabled={loading}
@@ -326,6 +355,9 @@ export function CreateMemorialView() {
               }))}
               onUpload={(files) =>
                 handleUpload(
+                  'together',
+                  together.displayName.trim() || 'Together',
+                  2,
                   together.id,
                   files,
                   together.photos,

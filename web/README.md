@@ -34,6 +34,8 @@ Without Supabase env vars, the app runs in **demo mode** (memorials saved in `lo
 
 After setup, memorials are stored in Supabase with public share links (`/m/:shareId`) and secret edit links (`/edit/:editToken`). Photos upload to the `memorial-photos` storage bucket.
 
+**Photo upload troubleshooting:** If uploads fail with a row-level security (RLS) error, re-run the latest [`supabase/migration.sql`](supabase/migration.sql) in the Supabase SQL Editor. The storage policies use a `memorial_edit_token_exists` helper so anonymous uploads can verify the edit-token folder without granting direct `SELECT` on `memorials`. Existing projects created from an older migration need this SQL update once.
+
 ## Routes
 
 | Path | Purpose |

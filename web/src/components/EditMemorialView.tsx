@@ -28,11 +28,20 @@ export function EditMemorialView() {
   const load = useCallback(async () => {
     if (!editToken) return
     setLoading(true)
+    setError(null)
     try {
-      const data = await getMemorialByEditToken(editToken)
+      let data = await getMemorialByEditToken(editToken)
       if (!data) {
         setError('Memorial not found. Check your edit link.')
         return
+      }
+      if (data.targets.length === 0) {
+        await upsertCallTarget(editToken, 'dog_a', 'Dog', 0)
+        data = await getMemorialByEditToken(editToken)
+        if (!data) {
+          setError('Memorial not found. Check your edit link.')
+          return
+        }
       }
       setMemorial(data)
       setTitle(data.title)
@@ -71,9 +80,21 @@ export function EditMemorialView() {
   const handleUpload = async (target: CallTarget, files: FileList) => {
     if (!editToken) return
     setSaving(true)
+    setError(null)
     try {
+      const resolvedTarget = await upsertCallTarget(
+        editToken,
+        target.kind,
+        target.displayName.trim() || target.kind,
+        target.sortOrder,
+      )
       for (let i = 0; i < files.length; i++) {
-        await uploadPhoto(editToken, target.id, files[i], target.media.length + i)
+        await uploadPhoto(
+          editToken,
+          resolvedTarget.id,
+          files[i],
+          target.media.length + i,
+        )
       }
       void load()
     } catch (err) {

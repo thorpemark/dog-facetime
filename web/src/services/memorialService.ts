@@ -66,6 +66,29 @@ export function isDemoMode(): boolean {
   return !isSupabaseConfigured
 }
 
+function formatUploadError(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err)
+  const lower = message.toLowerCase()
+
+  if (lower.includes('row-level security')) {
+    return 'Photo upload was blocked. Finish creating the memorial first, then try again. If this keeps happening, re-run the latest web/supabase/migration.sql in Supabase.'
+  }
+  if (lower.includes('invalid edit token or target')) {
+    return 'Could not find this dog profile. Refresh the page and try again.'
+  }
+  if (lower.includes('storage path must start with edit token folder')) {
+    return 'Upload path was invalid. Refresh the page and try again.'
+  }
+  if (lower.includes('payload too large') || lower.includes('entity too large')) {
+    return 'Photo is too large (max 10 MB).'
+  }
+  if (lower.includes('mime') || lower.includes('not allowed')) {
+    return 'Unsupported image type. Use JPEG, PNG, or WebP.'
+  }
+
+  return message || 'Upload failed'
+}
+
 // ─── Demo implementations ─────────────────────────────────────────────────
 
 function demoCreateMemorial(input: CreateMemorialInput): Memorial {
@@ -306,9 +329,17 @@ export async function uploadPhoto(
 ): Promise<MediaAsset> {
   if (isDemoMode()) return demoAddPhoto(editToken, targetId, file, sortOrder)
 
+  if (!editToken?.trim()) {
+    throw new Error('Memorial is not ready yet. Save the memorial name and try again.')
+  }
+  if (!targetId?.trim()) {
+    throw new Error('Dog profile is not ready yet. Wait a moment and try again.')
+  }
+
   const supabase = getSupabase()!
   const ext = file.name.split('.').pop() ?? 'jpg'
-  const storagePath = `${editToken}/${targetId}/${crypto.randomUUID()}.${ext}`
+  const filename = `${crypto.randomUUID()}.${ext}`
+  const storagePath = `${editToken}/${targetId}/${filename}`
 
   const { error: uploadError } = await supabase.storage
     .from('memorial-photos')
@@ -316,7 +347,9 @@ export async function uploadPhoto(
       contentType: file.type || 'image/jpeg',
       upsert: false,
     })
-  if (uploadError) throw uploadError
+  if (uploadError) {
+    throw new Error(formatUploadError(uploadError))
+  }
 
   const { data: urlData } = supabase.storage
     .from('memorial-photos')
@@ -330,7 +363,10 @@ export async function uploadPhoto(
     p_sort_order: sortOrder,
     p_reaction_tag: null,
   })
-  if (error) throw error
+  if (error) {
+    await supabase.storage.from('memorial-photos').remove([storagePath])
+    throw new Error(formatUploadError(error))
+  }
   return mapRpcMedia(data as Record<string, unknown>)
 }
 
