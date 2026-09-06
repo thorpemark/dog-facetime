@@ -50,6 +50,7 @@ See the sections below for iOS-specific details (clips, keywords, CI).
 - Upload photos; crossfading Ken Burns playback during calls
 - Share links for family (`/m/:shareId`) — no account needed
 - Secret edit links (`/edit/:editToken`) for owners
+- Optional creator sign-in (magic link + Google) with **My memorials** dashboard
 - Incoming call → Accept → full-screen memorial call UI
 - Web Speech API keyword listening (debug panel fallback)
 - Supabase backend with localStorage demo mode when env vars are missing
@@ -185,8 +186,10 @@ See **[`web/README.md`](web/README.md)** for full details. Summary:
 
 1. Create a Supabase project
 2. Run [`web/supabase/migration.sql`](web/supabase/migration.sql) in the SQL editor
-3. Copy `web/.env.example` → `web/.env` with your URL and anon key
-4. Rebuild / redeploy
+3. Run [`web/supabase/migration_auth_owners.sql`](web/supabase/migration_auth_owners.sql) for creator accounts
+4. Configure Auth redirect URLs (see [`web/README.md`](web/README.md))
+5. Copy `web/.env.example` → `web/.env` with your URL and anon key
+6. Rebuild / redeploy
 
 For GitHub Pages, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as repository secrets and update the deploy workflow, or build locally with `.env` and deploy `dist/`.
 

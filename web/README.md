@@ -27,12 +27,23 @@ Without Supabase env vars, the app runs in **demo mode** (memorials saved in `lo
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL Editor, paste and run [`supabase/migration.sql`](supabase/migration.sql).
-3. Copy `web/.env.example` → `web/.env` and set:
+3. Run [`supabase/migration_auth_owners.sql`](supabase/migration_auth_owners.sql) for creator accounts and **My memorials**.
+4. In **Authentication → URL Configuration**, add your site URL and redirect URLs (e.g. `https://thorpemark.github.io/dog-facetime/my` and `http://localhost:5173/my` for local dev).
+5. Enable **Email** magic links (default). Optionally enable **Google** under Authentication → Providers.
+6. Copy `web/.env.example` → `web/.env` and set:
    - `VITE_SUPABASE_URL` — Project Settings → API → Project URL
    - `VITE_SUPABASE_ANON_KEY` — Project Settings → API → `anon` `public` key
-4. Rebuild and redeploy (`npm run build` locally, or push to `main` for GitHub Pages).
+7. Rebuild and redeploy (`npm run build` locally, or push to `main` for GitHub Pages).
 
 After setup, memorials are stored in Supabase with public share links (`/m/:shareId`) and secret edit links (`/edit/:editToken`). Photos upload to the `memorial-photos` storage bucket.
+
+### Creator accounts
+
+Signed-in creators get memorials attached to their account (`owner_id`). Visit **My memorials** (`/my`) to copy share/edit links anytime.
+
+- **Magic link email** — no password; works well on iPhone
+- **Google** (optional) — enable in Supabase Auth providers
+- **Anonymous create** still works — sign in afterward to claim memorials created in the same browser session
 
 **Photo upload troubleshooting:** The web app never inserts into `media_assets` directly — uploads go to storage at `{editToken}/{targetId}/…` and rows are created only via the `register_media_asset` RPC (tables have RLS with no anon INSERT policies). If registration fails with an RLS error, re-run [`supabase/migration.sql`](supabase/migration.sql) so the SECURITY DEFINER RPCs are present. Storage bucket policies can be relaxed to `bucket_id = 'memorial-photos'` only; the code fix above is still required for `media_assets`.
 
@@ -40,8 +51,9 @@ After setup, memorials are stored in Supabase with public share links (`/m/:shar
 
 | Path | Purpose |
 |------|---------|
-| `/` | Home — create a memorial or open a link |
+| `/` | Home — create a memorial, open a link, sign in |
 | `/create` | Step-by-step memorial creation |
+| `/my` | My memorials — list owned memorials, sign in |
 | `/m/:shareId` | Public share — pick who to call, start FaceTime UI |
 | `/edit/:editToken` | Owner edit — photos, names, regenerate share link |
 
@@ -78,7 +90,8 @@ After the next push to `main`, the site will be live at:
 
 | Screen | What it does |
 |--------|--------------|
-| **Home** | Create a memorial or paste a share link |
+| **Home** | Create a memorial, paste a share link, sign in |
+| **My memorials** | List your memorials, copy share/edit links |
 | **Create flow** | Memorial name → Dog 1 photos → optional Dog 2 → optional Together → copy links |
 | **Share page** | Pick who to call (when multiple dogs), optional your name |
 | **Incoming Call** | FaceTime-style ring — Accept or Decline |
@@ -171,7 +184,8 @@ web/
 │   ├── clips/              # Fallback video assets (no photos)
 │   └── keyword_rules.json  # Phrase → reaction mapping
 ├── supabase/
-│   └── migration.sql       # One-paste Supabase setup
+│   ├── migration.sql              # One-paste Supabase setup
+│   └── migration_auth_owners.sql  # Owner accounts & My memorials RPCs
 ├── src/
 │   ├── components/         # UI screens
 │   ├── context/            # Call state machine

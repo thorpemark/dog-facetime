@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { AppHeader } from './AppHeader'
 import { DemoModeBanner } from './DemoModeBanner'
 
 export function LandingView() {
@@ -32,19 +33,24 @@ export function LandingView() {
   return (
     <div className="screen landing-screen">
       <DemoModeBanner />
+      <AppHeader />
       <div className="landing-content">
         <div className="landing-hero">
           <span className="paw-icon large">🐾</span>
           <h1>Memorial Call</h1>
           <p className="landing-subtitle">
             Create a gentle FaceTime-style memorial for a beloved dog. Share a
-            link with family — no account needed.
+            link with family — no account needed to call.
           </p>
         </div>
 
         <Link to="/create" className="btn-call">
           <span className="btn-icon">✨</span>
           Create a Memorial
+        </Link>
+
+        <Link to="/my" className="btn-text landing-my-link">
+          My memorials / Sign in
         </Link>
 
         <div className="open-link-section">

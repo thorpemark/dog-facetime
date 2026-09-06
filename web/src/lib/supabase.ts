@@ -15,7 +15,13 @@ let client: SupabaseClient | null = null
 export function getSupabase(): SupabaseClient | null {
   if (!isSupabaseConfigured) return null
   if (!client) {
-    client = createClient(url!, anonKey!)
+    client = createClient(url!, anonKey!, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
   }
   return client
 }

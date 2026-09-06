@@ -951,3 +951,217 @@ button {
     transform: scale(1) translate(0, 0.5%);
   }
 }
+
+/* App header / auth */
+.app-header {
+  flex-shrink: 0;
+  padding: max(env(safe-area-inset-top), 8px) 16px 0;
+}
+
+.app-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+
+.app-header-link {
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.app-header-email {
+  color: rgba(255, 255, 255, 0.45);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-header-signout {
+  padding: 4px 0;
+}
+
+.landing-my-link {
+  margin-top: -4px;
+}
+
+/* Sign in */
+.sign-in-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.sign-in-panel.compact {
+  text-align: left;
+}
+
+.sign-in-lead {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.sign-in-email-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.sign-in-email-label input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 1rem;
+}
+
+.sign-in-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.8rem;
+}
+
+.sign-in-divider::before,
+.sign-in-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.sign-in-google {
+  width: 100%;
+  text-align: center;
+}
+
+.sign-in-sent {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.sign-in-sent-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.auth-hint {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.my-sign-in {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.save-account-cta {
+  width: 100%;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: left;
+}
+
+.save-account-lead {
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.saved-to-account {
+  color: #7ee787;
+  font-size: 0.95rem;
+}
+
+.done-hint {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+}
+
+.loading-hint {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.9rem;
+}
+
+/* My memorials list */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 32px 0;
+}
+
+.empty-state h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.empty-state p {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+  max-width: 300px;
+  line-height: 1.5;
+}
+
+.memorial-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.memorial-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.memorial-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.memorial-card-header h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  flex: 1;
+}
+
+.memorial-date {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+}
+
+.memorial-note-preview {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.memorial-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
