@@ -1,11 +1,16 @@
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase'
 import { generateEditToken, generateId, generateShareId } from '../lib/ids'
+import {
+  getPendingClaims,
+  removePendingClaim,
+} from '../lib/pendingMemorials'
 import type {
   CallTarget,
   CallTargetKind,
   CreateMemorialInput,
   MediaAsset,
   Memorial,
+  MemorialSummary,
 } from '../types/memorial'
 
 const DEMO_STORE_KEY = 'memorial-call-demo-store'
@@ -26,6 +31,17 @@ function readDemoStore(): DemoStore {
 
 function writeDemoStore(store: DemoStore): void {
   localStorage.setItem(DEMO_STORE_KEY, JSON.stringify(store))
+}
+
+function mapRpcMemorialSummary(data: Record<string, unknown>): MemorialSummary {
+  return {
+    id: data.id as string,
+    title: data.title as string,
+    note: (data.note as string) ?? '',
+    shareId: data.share_id as string,
+    editToken: data.edit_token as string,
+    createdAt: data.created_at as string,
+  }
 }
 
 function mapRpcMemorial(data: Record<string, unknown>): Memorial {
@@ -393,6 +409,44 @@ export async function deleteCallTarget(
     p_target_id: targetId,
   })
   if (error) throw error
+}
+
+export async function listMyMemorials(): Promise<MemorialSummary[]> {
+  if (isDemoMode()) return []
+
+  const supabase = getSupabase()!
+  const { data, error } = await supabase.rpc('list_my_memorials')
+  if (error) throw error
+  const items = (data as Record<string, unknown>[] | null) ?? []
+  return items.map(mapRpcMemorialSummary)
+}
+
+export async function claimMemorial(editToken: string): Promise<MemorialSummary> {
+  if (isDemoMode()) throw new Error('Sign-in requires Supabase')
+
+  const supabase = getSupabase()!
+  const { data, error } = await supabase.rpc('claim_memorial', {
+    p_edit_token: editToken,
+  })
+  if (error) throw error
+  return mapRpcMemorialSummary(data as Record<string, unknown>)
+}
+
+export async function claimPendingMemorials(): Promise<number> {
+  const pending = getPendingClaims()
+  if (pending.length === 0 || isDemoMode()) return 0
+
+  let claimed = 0
+  for (const item of pending) {
+    try {
+      await claimMemorial(item.editToken)
+      removePendingClaim(item.editToken)
+      claimed++
+    } catch {
+      /* skip invalid or already-claimed */
+    }
+  }
+  return claimed
 }
 
 export function memorialToCallProfile(

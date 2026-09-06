@@ -31,6 +31,15 @@ export interface CreateMemorialInput {
   note?: string
 }
 
+export interface MemorialSummary {
+  id: string
+  title: string
+  note: string
+  shareId: string
+  editToken: string
+  createdAt: string
+}
+
 export interface CallSessionProfile {
   dogName: string
   ownerName: string

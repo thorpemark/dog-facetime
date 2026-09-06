@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import type { CallTargetKind, Memorial } from '../types/memorial'
+import { useAuth } from '../context/AuthContext'
+import { addPendingClaim } from '../lib/pendingMemorials'
 import {
   createMemorial,
   upsertCallTarget,
@@ -10,6 +12,7 @@ import { editUrl, shareUrl } from '../lib/urls'
 import { CopyLinkButton } from './CopyLinkButton'
 import { DemoModeBanner } from './DemoModeBanner'
 import { PhotoUploader } from './PhotoUploader'
+import { SignInPanel } from './SignInPanel'
 
 type Step = 'title' | 'dog_a' | 'dog_b_choice' | 'dog_b' | 'together_choice' | 'together' | 'done'
 
@@ -21,6 +24,7 @@ interface TargetDraft {
 
 export function CreateMemorialView() {
   const navigate = useNavigate()
+  const { user, authAvailable } = useAuth()
   const [step, setStep] = useState<Step>('title')
   const [title, setTitle] = useState('')
   const [note, setNote] = useState('')
@@ -35,6 +39,9 @@ export function CreateMemorialView() {
     if (memorial) return memorial
     const created = await createMemorial({ title, note })
     setMemorial(created)
+    if (!user && created.editToken && authAvailable) {
+      addPendingClaim(created.id, created.editToken)
+    }
     return created
   }
 
@@ -351,7 +358,21 @@ export function CreateMemorialView() {
           <div className="form-step done-step">
             <span className="paw-icon large">🐾</span>
             <h2>Your memorial is ready</h2>
-            <p>Share the link with family — they can call without signing in.</p>
+            {user ? (
+              <p className="saved-to-account">Saved to your account — find it anytime under My memorials.</p>
+            ) : authAvailable ? (
+              <div className="save-account-cta">
+                <p className="save-account-lead">
+                  <strong>Save this memorial to your account</strong> so you can recover your share and edit links later.
+                </p>
+                <SignInPanel compact />
+              </div>
+            ) : (
+              <p>Share the link with family — they can call without signing in.</p>
+            )}
+            {user && (
+              <p className="done-hint">Share the link with family — they can call without signing in.</p>
+            )}
 
             <div className="link-actions">
               <CopyLinkButton label="Copy share link" url={shareUrl(memorial.shareId)} />
@@ -376,6 +397,9 @@ export function CreateMemorialView() {
             >
               Edit photos &amp; names
             </button>
+            {user && (
+              <Link to="/my" className="btn-text">View in My memorials</Link>
+            )}
           </div>
         )}
       </div>
