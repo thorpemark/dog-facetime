@@ -102,14 +102,13 @@ final class VideoMixer: ObservableObject {
     }
 
     private func crossfade(to slot: PlayerSlot, duration: TimeInterval) {
-        withAnimation(.easeInOut(duration: duration)) {
-            if slot == .primary {
-                primaryOpacity = 1.0
-                secondaryOpacity = 0.0
-            } else {
-                primaryOpacity = 0.0
-                secondaryOpacity = 1.0
-            }
+        _ = duration
+        if slot == .primary {
+            primaryOpacity = 1.0
+            secondaryOpacity = 0.0
+        } else {
+            primaryOpacity = 0.0
+            secondaryOpacity = 1.0
         }
         activeSlot = slot
     }

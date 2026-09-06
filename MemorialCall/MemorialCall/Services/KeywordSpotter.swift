@@ -14,6 +14,7 @@ import Speech
 /// 3. Run Porcupine on a background audio tap for wake words; keep Speech STT for
 ///    longer phrases like "good boy" or "come here".
 /// 4. Inject the preferred spotter in `CallViewModel` based on user settings.
+@MainActor
 protocol KeywordSpotting: AnyObject {
     var onMatch: ((String) -> Void)? { get set }
     func startListening(rules: [KeywordRule], dogName: String, ownerName: String)
