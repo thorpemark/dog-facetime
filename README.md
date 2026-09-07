@@ -1,24 +1,6 @@
-# Memorial Call — Clips & Voice Reactions
-
-> **Product fork:** This repository (`dog-facetime-clips`) is the **interactive clip-library** line — prerendered idle/reaction video, keyword spotting, and random clip variety during FaceTime-style calls.
->
-> The **still-image Ken Burns** memorial product remains in **[thorpemark/dog-facetime](https://github.com/thorpemark/dog-facetime)**. Do not merge clip-first behavior back into that repo without an explicit product decision.
+# Memorial Call
 
 A gentle memorial experience that simulates FaceTiming a beloved dog who has passed away — full-screen video, familiar reactions when you speak their name, and a warm call-like UI.
-
-## Clips fork vs still-image app
-
-| | **dog-facetime** (original) | **dog-facetime-clips** (this repo) |
-|---|---------------------------|-----------------------------------|
-| **Primary media** | Uploaded photos + Ken Burns motion | Prerendered MP4 idle + reaction clips |
-| **Voice** | Maps phrases → photo motion presets | Maps phrases → reaction **buckets** → random clip |
-| **Idle state** | Crossfading stills | Looping idle clip(s) |
-| **Sharing** | Supabase memorial links | Same UX target; clip assets per memorial (planned) |
-| **Status** | Production memorial sharing | v1 scaffold — see [`docs/CLIP_LIBRARY_PLAN.md`](docs/CLIP_LIBRARY_PLAN.md) |
-
-**Next steps for Mark:** generate portrait reaction clips (Runway/Kling/etc.), fill `web/src/data/reactionCatalog.ts`, tune phrase lists, then wire playback to pick randomly from each bucket. Ken Burns photo mode stays in code as fallback until dual-mode is complete.
-
----
 
 ## Run Today (No Mac Required)
 
@@ -38,7 +20,7 @@ See **[`web/README.md`](web/README.md)** for phone setup, speech recognition tip
 
 After enabling **Pages → Source: GitHub Actions** in repo settings, pushes to `main` publish:
 
-**https://thorpemark.github.io/dog-facetime-clips/**
+**https://thorpemark.github.io/dog-facetime/**
 
 ## Native iOS App (Future / With Mac)
 
@@ -58,16 +40,14 @@ See the sections below for iOS-specific details (clips, keywords, CI).
 | Path | Purpose |
 |------|---------|
 | **`web/`** | **Run now** — Vite + React web app for Safari/Chrome (PC, iPhone, iPad) |
-| **`docs/CLIP_LIBRARY_PLAN.md`** | Architecture for clip buckets, phrase matching, storage, migration |
-| **`web/src/data/reactionCatalog.ts`** | Reaction bucket stub (phrases + placeholder clip paths) |
 | **`MemorialCall/`** | Native iOS app — requires Mac + Xcode |
 | **`.github/workflows/deploy-web.yml`** | Builds & deploys `web/` to GitHub Pages |
+| **`.github/workflows/ios-simulator-build.yml`** | CI build for iOS Simulator (no Mac needed to verify) |
 
 ## Web App Features
 
 - Create personal memorials with 1–3 call targets (Dog A, Dog B, Together)
-- Upload photos; crossfading Ken Burns playback during calls *(legacy still mode — kept until clip dual-mode ships)*
-- **Clip-library direction:** idle loop + voice-triggered prerendered reactions (see plan doc)
+- Upload photos; crossfading Ken Burns playback during calls
 - **Call-screen photo controls** — Side-drawer Ken Burns speed (saved in browser), swipe or tap prev/next between photos
 - **Portrait crop framing** — Drag a portrait frame on create/edit photos; zoom out for together shots
 - Share links for family (`/m/:shareId`) — no account needed
@@ -76,8 +56,8 @@ See the sections below for iOS-specific details (clips, keywords, CI).
 - Incoming call → Accept → full-screen memorial call UI
 - Web Speech API keyword listening (debug panel fallback)
 - Supabase backend with localStorage demo mode when env vars are missing
-- Configurable `keyword_rules.json` → reaction mapping (migrating toward `reactionCatalog.ts`)
-- GitHub Pages deploy at `/dog-facetime-clips/` base path
+- Configurable `keyword_rules.json` → reaction mapping
+- GitHub Pages deploy at `/dog-facetime/` base path
 
 ## iOS App — Quick Start
 
@@ -106,14 +86,14 @@ idle → listen → react → cooldown → idle
 
 - **idle** — loops the idle clip (dog looking at camera)
 - **listen** — microphone active, Speech framework transcribes speech
-- **react** — crossfades to a matching reaction clip (random pick within bucket — planned)
+- **react** — crossfades to a matching reaction clip
 - **cooldown** — brief pause before returning to idle
 
 ## Replacing Placeholder Clips
 
 Placeholder colored videos ship in both `web/public/clips/` and `MemorialCall/MemorialCall/Resources/Clips/`. Replace them with real footage of your dog.
 
-### Naming Convention (v1 single-clip per rule)
+### Naming Convention
 
 | File | Purpose |
 |------|---------|
@@ -126,10 +106,6 @@ Placeholder colored videos ship in both `web/public/clips/` and `MemorialCall/Me
 | `react_come.mp4` | Reaction to "come here" |
 | `react_owner.mp4` | Reaction when owner's name is spoken |
 
-### Multi-clip buckets (v1 target)
-
-See [`docs/CLIP_LIBRARY_PLAN.md`](docs/CLIP_LIBRARY_PLAN.md) and `web/src/data/reactionCatalog.ts` for bucket layout, e.g. `clips/reactions/come/come_01.mp4`, `come_02.mp4`, …
-
 ### Clip Guidelines
 
 - **Format:** H.264 MP4, 720×1280 (portrait) recommended
@@ -138,7 +114,7 @@ See [`docs/CLIP_LIBRARY_PLAN.md`](docs/CLIP_LIBRARY_PLAN.md) and `web/src/data/r
 
 ## Keyword → Clip Mapping
 
-Rules live in `web/public/keyword_rules.json` (web) and `MemorialCall/MemorialCall/Resources/keyword_rules.json` (iOS). The clips fork is migrating toward **`web/src/data/reactionCatalog.ts`** for phrase lists and multi-clip buckets.
+Rules live in `web/public/keyword_rules.json` (web) and `MemorialCall/MemorialCall/Resources/keyword_rules.json` (iOS):
 
 ```json
 {
@@ -195,16 +171,16 @@ Download artifacts from GitHub → **Actions** → select run → **Artifacts**.
 - **Web on iPhone:** Allow microphone in Safari; speak naturally during a call.
 - **iOS Simulator:** Limited microphone — use the debug panel (ladybug button).
 
-## TODO / Next Steps (clips fork)
+## TODO / Next Steps
 
-- [ ] Wire `reactionCatalog.ts` into playback (random clip per bucket)
-- [ ] Dual mode: Ken Burns photos **or** clip library per memorial
-- [ ] Idle video clip rotation (multiple idle loops)
-- [ ] Supabase Storage bucket for per-memorial clip sets
-- [ ] Generate Murphy/Riley portrait reactions (Runway, Kling, etc.)
-- [ ] Phrase tuning + fuzzy closest-match fallback
+- [x] Photo upload for memorial sharing (Supabase + demo mode)
+- [x] Share links for family (`/m/:shareId`)
+- [ ] Real AI video generation from photos (v2)
 - [ ] Porcupine wake-word integration (iOS) for faster keyword detection
 - [ ] Custom ringtone / memorial sound
+- [ ] True front-camera PiP preview (currently a placeholder)
+- [ ] Clip crossfade duration settings
+- [ ] Export/share memorial moment snapshots
 
 ## Supabase Setup (Web Sharing)
 
@@ -213,7 +189,7 @@ See **[`web/README.md`](web/README.md)** for full details. Summary:
 1. Create a Supabase project
 2. Run [`web/supabase/migration.sql`](web/supabase/migration.sql) in the SQL editor
 3. Run [`web/supabase/migration_auth_owners.sql`](web/supabase/migration_auth_owners.sql) for creator accounts
-4. Configure Auth redirect URLs (site root `https://thorpemark.github.io/dog-facetime-clips/`, not `/my` — see [`web/README.md`](web/README.md))
+4. Configure Auth redirect URLs (site root `https://thorpemark.github.io/dog-facetime/`, not `/my` — see [`web/README.md`](web/README.md))
 5. Copy `web/.env.example` → `web/.env` with your URL and anon key
 6. Rebuild / redeploy
 
