@@ -3,16 +3,22 @@ import {
   DEFAULT_FOCAL_X,
   DEFAULT_FOCAL_Y,
   DEFAULT_FOCAL_ZOOM,
+  DEFAULT_FOCAL_ROTATION_DEG,
+  FOCAL_ROTATION_STEP,
+  MAX_FOCAL_ROTATION_DEG,
+  MIN_FOCAL_ROTATION_DEG,
   computeContainBounds,
   canFitFullImage,
   defaultDualFramingForImage,
   defaultFocalFrameForImage,
+  editorImageRotationStyle,
   fitFullImageFraming,
   focalFrameFromCenter,
   frameRectFromFocal,
   frameSizeFromFocal,
   hasCustomDualFraming,
   isLandscapeImage,
+  normalizeFocalRotationDeg,
   nudgeFocalCenter,
   normalizedFrameRectFromFocal,
   resizeCropRect,
@@ -191,6 +197,7 @@ export function PhotoFocalEditor({
           size.height,
           imageAspect,
           viewportAspect,
+          current.focalRotationDeg ?? DEFAULT_FOCAL_ROTATION_DEG,
         )
       })
     },
@@ -219,6 +226,7 @@ export function PhotoFocalEditor({
           size.height,
           imageAspect,
           viewportAspect,
+          current.focalRotationDeg ?? DEFAULT_FOCAL_ROTATION_DEG,
         )
       })
     },
@@ -238,8 +246,13 @@ export function PhotoFocalEditor({
       if (!point) return
 
       const nextRect = resizeCropRect(startRect, handle, point.x, point.y)
-      setActiveFocal(
-        focalFrameFromNormalizedRect(nextRect, imageAspect, viewportAspect),
+      setActiveFocal((current) =>
+        focalFrameFromNormalizedRect(
+          nextRect,
+          imageAspect,
+          viewportAspect,
+          current.focalRotationDeg ?? DEFAULT_FOCAL_ROTATION_DEG,
+        ),
       )
     },
     [imageAspect, imageBounds, setActiveFocal, viewportAspect],
@@ -433,8 +446,35 @@ export function PhotoFocalEditor({
   }, [activeOrientation, imageAspect, preferWideFrame, viewportAspect])
 
   const handleFitFullImage = useCallback(() => {
-    setActiveFocal(fitFullImageFraming(imageAspect, viewportAspect))
+    setActiveFocal((current) => ({
+      ...fitFullImageFraming(imageAspect, viewportAspect),
+      focalRotationDeg: current.focalRotationDeg,
+    }))
   }, [imageAspect, setActiveFocal, viewportAspect])
+
+  const handleRotationChange = useCallback(
+    (value: number) => {
+      const rotation = normalizeFocalRotationDeg(value)
+      setActiveFocal((current) => ({
+        ...current,
+        focalRotationDeg:
+          rotation === DEFAULT_FOCAL_ROTATION_DEG ? undefined : rotation,
+      }))
+    },
+    [setActiveFocal],
+  )
+
+  const handleResetRotation = useCallback(() => {
+    setActiveFocal((current) => ({
+      ...current,
+      focalRotationDeg: undefined,
+    }))
+  }, [setActiveFocal])
+
+  const rotationDeg = normalizeFocalRotationDeg(
+    focal.focalRotationDeg ?? DEFAULT_FOCAL_ROTATION_DEG,
+  )
+  const showResetRotation = rotationDeg !== DEFAULT_FOCAL_ROTATION_DEG
 
   const frameRect =
     imageBounds
@@ -527,6 +567,7 @@ export function PhotoFocalEditor({
               draggable={false}
               onDragStart={(event) => event.preventDefault()}
               onLoad={handleImageLoad}
+              style={editorImageRotationStyle(focal)}
             />
             {frameRect && (
               <>
@@ -621,6 +662,44 @@ export function PhotoFocalEditor({
               ↓
             </button>
           </div>
+        </div>
+
+        <div
+          className="focal-rotation-controls"
+          role="group"
+          aria-label="Rotate photo"
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <div className="focal-rotation-header">
+            <span className="focal-rotation-label">Rotate</span>
+            <span className="focal-rotation-value" aria-live="polite">
+              {rotationDeg > 0 ? '+' : ''}
+              {rotationDeg.toFixed(1)}°
+            </span>
+            {showResetRotation && (
+              <button
+                type="button"
+                className="btn-text focal-rotation-reset"
+                onClick={handleResetRotation}
+                disabled={saving}
+              >
+                Reset rotation
+              </button>
+            )}
+          </div>
+          <input
+            type="range"
+            className="focal-rotation-slider"
+            min={MIN_FOCAL_ROTATION_DEG}
+            max={MAX_FOCAL_ROTATION_DEG}
+            step={FOCAL_ROTATION_STEP}
+            value={rotationDeg}
+            aria-valuemin={MIN_FOCAL_ROTATION_DEG}
+            aria-valuemax={MAX_FOCAL_ROTATION_DEG}
+            aria-valuenow={rotationDeg}
+            aria-valuetext={`${rotationDeg > 0 ? '+' : ''}${rotationDeg.toFixed(1)} degrees`}
+            onChange={(event) => handleRotationChange(Number(event.target.value))}
+          />
         </div>
 
         <div className="focal-editor-actions">

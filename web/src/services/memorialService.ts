@@ -118,6 +118,7 @@ function portraitFramingFromRecord(m: Record<string, unknown>): FocalFrame {
     m.focal_zoom ?? m.focalZoom,
     m.focal_crop_w ?? m.focalCropW ?? m.cropWidth,
     m.focal_crop_h ?? m.focalCropH ?? m.cropHeight,
+    m.focal_rotation_deg ?? m.focalRotationDeg,
   )
 }
 
@@ -129,6 +130,7 @@ function landscapeFramingFromRecord(m: Record<string, unknown>): FocalFrame | nu
       m.landscape_focal_zoom ?? m.landscapeFocalZoom,
       m.landscape_focal_crop_w ?? m.landscapeCropW ?? m.landscapeCropWidth,
       m.landscape_focal_crop_h ?? m.landscapeCropH ?? m.landscapeCropHeight,
+      m.landscape_focal_rotation_deg ?? m.landscapeFocalRotationDeg,
     )
   ) {
     return null
@@ -140,6 +142,7 @@ function landscapeFramingFromRecord(m: Record<string, unknown>): FocalFrame | nu
     m.landscape_focal_zoom ?? m.landscapeFocalZoom,
     m.landscape_focal_crop_w ?? m.landscapeCropW ?? m.landscapeCropWidth,
     m.landscape_focal_crop_h ?? m.landscapeCropH ?? m.landscapeCropHeight,
+    m.landscape_focal_rotation_deg ?? m.landscapeFocalRotationDeg,
   )
 }
 
@@ -154,6 +157,7 @@ export function dualFramingFromMediaAsset(
     asset.focalZoom,
     asset.cropWidth,
     asset.cropHeight,
+    asset.focalRotationDeg,
   )
 
   const hasLandscape =
@@ -161,7 +165,8 @@ export function dualFramingFromMediaAsset(
     asset.landscapeFocalY != null ||
     asset.landscapeFocalZoom != null ||
     asset.landscapeCropWidth != null ||
-    asset.landscapeCropHeight != null
+    asset.landscapeCropHeight != null ||
+    asset.landscapeFocalRotationDeg != null
 
   const landscape = hasLandscape
     ? focalFrameFromValues(
@@ -170,6 +175,7 @@ export function dualFramingFromMediaAsset(
         asset.landscapeFocalZoom,
         asset.landscapeCropWidth,
         asset.landscapeCropHeight,
+        asset.landscapeFocalRotationDeg,
       )
     : imageAspect != null
       ? defaultDualFramingForImage(imageAspect, preferWideFrame).landscape
@@ -184,11 +190,13 @@ function applyDualFramingToAsset(asset: MediaAsset, framing: DualFraming): void 
   asset.focalZoom = framing.portrait.focalZoom
   asset.cropWidth = framing.portrait.cropWidth
   asset.cropHeight = framing.portrait.cropHeight
+  asset.focalRotationDeg = framing.portrait.focalRotationDeg
   asset.landscapeFocalX = framing.landscape.focalX
   asset.landscapeFocalY = framing.landscape.focalY
   asset.landscapeFocalZoom = framing.landscape.focalZoom
   asset.landscapeCropWidth = framing.landscape.cropWidth
   asset.landscapeCropHeight = framing.landscape.cropHeight
+  asset.landscapeFocalRotationDeg = framing.landscape.focalRotationDeg
 }
 
 function mapRpcMedia(m: Record<string, unknown>): MediaAsset {
@@ -212,11 +220,13 @@ function mapRpcMedia(m: Record<string, unknown>): MediaAsset {
     focalZoom: portrait.focalZoom,
     cropWidth: portrait.cropWidth,
     cropHeight: portrait.cropHeight,
+    focalRotationDeg: portrait.focalRotationDeg,
     landscapeFocalX: landscape?.focalX,
     landscapeFocalY: landscape?.focalY,
     landscapeFocalZoom: landscape?.focalZoom,
     landscapeCropWidth: landscape?.cropWidth,
     landscapeCropHeight: landscape?.cropHeight,
+    landscapeFocalRotationDeg: landscape?.focalRotationDeg,
   }
 }
 
@@ -562,11 +572,13 @@ export async function uploadPhoto(
     p_focal_zoom: framing?.portrait.focalZoom ?? DEFAULT_FOCAL_ZOOM,
     p_focal_crop_w: framing?.portrait.cropWidth ?? null,
     p_focal_crop_h: framing?.portrait.cropHeight ?? null,
+    p_focal_rotation_deg: framing?.portrait.focalRotationDeg ?? 0,
     p_landscape_focal_x: framing?.landscape.focalX ?? null,
     p_landscape_focal_y: framing?.landscape.focalY ?? null,
     p_landscape_focal_zoom: framing?.landscape.focalZoom ?? null,
     p_landscape_focal_crop_w: framing?.landscape.cropWidth ?? null,
     p_landscape_focal_crop_h: framing?.landscape.cropHeight ?? null,
+    p_landscape_focal_rotation_deg: framing?.landscape.focalRotationDeg ?? null,
   })
   if (error) {
     await supabase.storage.from('memorial-photos').remove([storagePath])
@@ -630,11 +642,13 @@ export async function updateMediaFocalPoint(
     p_focal_zoom: framing.portrait.focalZoom,
     p_focal_crop_w: framing.portrait.cropWidth ?? null,
     p_focal_crop_h: framing.portrait.cropHeight ?? null,
+    p_focal_rotation_deg: framing.portrait.focalRotationDeg ?? 0,
     p_landscape_focal_x: framing.landscape.focalX,
     p_landscape_focal_y: framing.landscape.focalY,
     p_landscape_focal_zoom: framing.landscape.focalZoom,
     p_landscape_focal_crop_w: framing.landscape.cropWidth ?? null,
     p_landscape_focal_crop_h: framing.landscape.cropHeight ?? null,
+    p_landscape_focal_rotation_deg: framing.landscape.focalRotationDeg ?? null,
   })
   if (error) throw new Error(formatRpcError(error, 'Failed to save focus point'))
 
@@ -778,11 +792,13 @@ export function memorialToCallProfile(
     focalZoom: m.focalZoom,
     cropWidth: m.cropWidth,
     cropHeight: m.cropHeight,
+    focalRotationDeg: m.focalRotationDeg,
     landscapeFocalX: m.landscapeFocalX,
     landscapeFocalY: m.landscapeFocalY,
     landscapeFocalZoom: m.landscapeFocalZoom,
     landscapeCropWidth: m.landscapeCropWidth,
     landscapeCropHeight: m.landscapeCropHeight,
+    landscapeFocalRotationDeg: m.landscapeFocalRotationDeg,
   }))
 
   return {

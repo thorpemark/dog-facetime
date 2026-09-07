@@ -143,11 +143,13 @@ export function EditMemorialView() {
                   focalZoom: updated.focalZoom,
                   cropWidth: updated.cropWidth,
                   cropHeight: updated.cropHeight,
+                  focalRotationDeg: updated.focalRotationDeg,
                   landscapeFocalX: updated.landscapeFocalX,
                   landscapeFocalY: updated.landscapeFocalY,
                   landscapeFocalZoom: updated.landscapeFocalZoom,
                   landscapeCropWidth: updated.landscapeCropWidth,
                   landscapeCropHeight: updated.landscapeCropHeight,
+                  landscapeFocalRotationDeg: updated.landscapeFocalRotationDeg,
                 }
               : photo,
           ),

@@ -128,11 +128,11 @@ Uploaded photos are shown with a respectful “alive” presentation:
 **Portrait framing (focal frame):**
 
 - On create/edit, tap a photo to set **two saved crops**: phone portrait and landscape/PC
-- Resize with corner/edge handles (width and height), pan with Move frame, tap to focus, and nudge with arrows
-- Stored per photo as portrait `focal_x` / `focal_y` / optional `focal_crop_w` / `focal_crop_h` plus landscape `landscape_focal_*` columns (legacy `focal_zoom` kept as derived metadata)
+- Resize with corner/edge handles (width and height), pan with Move frame, tap to focus, nudge with arrows, and fine-tune straightening with the **Rotate** slider (−15° … +15° per orientation)
+- Stored per photo as portrait `focal_x` / `focal_y` / optional `focal_crop_w` / `focal_crop_h` / `focal_rotation_deg` plus landscape `landscape_focal_*` columns (legacy `focal_zoom` kept as derived metadata)
 - During calls, the app picks the matching framing when the viewport is portrait vs landscape (phone rotation or desktop widescreen)
 - Together / group photos default to slightly wider framing on landscape images
-- Existing Supabase projects: run [`supabase/migration_focal_point.sql`](supabase/migration_focal_point.sql), [`supabase/migration_focal_zoom.sql`](supabase/migration_focal_zoom.sql), [`supabase/migration_focal_crop.sql`](supabase/migration_focal_crop.sql), then [`supabase/migration_focal_orientation.sql`](supabase/migration_focal_orientation.sql) after the base migration
+- Existing Supabase projects: run [`supabase/migration_focal_point.sql`](supabase/migration_focal_point.sql), [`supabase/migration_focal_zoom.sql`](supabase/migration_focal_zoom.sql), [`supabase/migration_focal_crop.sql`](supabase/migration_focal_crop.sql), [`supabase/migration_focal_orientation.sql`](supabase/migration_focal_orientation.sql), then [`supabase/migration_focal_rotation.sql`](supabase/migration_focal_rotation.sql) after the base migration
 
 Without uploaded photos, placeholder MP4 clips from `public/clips/` are used.
 

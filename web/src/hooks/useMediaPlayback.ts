@@ -416,11 +416,13 @@ export function buildPhotoSources(
     focalZoom?: number
     cropWidth?: number
     cropHeight?: number
+    focalRotationDeg?: number
     landscapeFocalX?: number
     landscapeFocalY?: number
     landscapeFocalZoom?: number
     landscapeCropWidth?: number
     landscapeCropHeight?: number
+    landscapeFocalRotationDeg?: number
   }>,
 ): PhotoSource[] {
   if (!photoFocalPoints || photoFocalPoints.length === 0) {
@@ -435,6 +437,7 @@ export function buildPhotoSources(
       points?.focalZoom,
       points?.cropWidth,
       points?.cropHeight,
+      points?.focalRotationDeg,
     )
     const landscapeStored = hasStoredLandscapeFraming(
       points?.landscapeFocalX,
@@ -442,6 +445,7 @@ export function buildPhotoSources(
       points?.landscapeFocalZoom,
       points?.landscapeCropWidth,
       points?.landscapeCropHeight,
+      points?.landscapeFocalRotationDeg,
     )
     const landscape = landscapeStored
       ? focalFrameFromValues(
@@ -450,6 +454,7 @@ export function buildPhotoSources(
           points?.landscapeFocalZoom,
           points?.landscapeCropWidth,
           points?.landscapeCropHeight,
+          points?.landscapeFocalRotationDeg,
         )
       : portrait
 
