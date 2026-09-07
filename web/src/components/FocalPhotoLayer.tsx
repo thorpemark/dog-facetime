@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react'
 import type { MotionPreset } from '../types/memorial'
-import type { FocalFrame } from '../utils/focalPoint'
+import type { DisplayOrientation, FocalFrame } from '../utils/focalPoint'
 import {
   photoLayerCoverStyle,
   photoLayerMediaStyle,
+  viewportAspectForOrientation,
 } from '../utils/focalPoint'
 
 interface FocalPhotoLayerProps {
@@ -11,15 +12,18 @@ interface FocalPhotoLayerProps {
   focal: FocalFrame
   /** Known image aspect (width/height); refined on image load when omitted. */
   imageAspect?: number
+  /** Call viewport orientation used for letterboxing math. */
+  displayOrientation?: DisplayOrientation
   className?: string
   motionClassName?: string
 }
 
-/** Renders a focal-framed photo with letterboxed portrait playback. */
+/** Renders a focal-framed photo with letterboxed playback for the active viewport. */
 export function FocalPhotoLayer({
   imageUrl,
   focal,
   imageAspect: imageAspectProp,
+  displayOrientation = 'portrait',
   className,
   motionClassName,
 }: FocalPhotoLayerProps) {
@@ -36,12 +40,13 @@ export function FocalPhotoLayer({
   )
 
   const aspect = imageAspectProp ?? loadedAspect ?? 1
+  const viewportAspect = viewportAspectForOrientation(displayOrientation)
 
   return (
     <div className={className}>
       <div
         className="photo-layer-cover"
-        style={photoLayerCoverStyle(focal, aspect)}
+        style={photoLayerCoverStyle(focal, aspect, viewportAspect)}
       >
         <img
           className={motionClassName}

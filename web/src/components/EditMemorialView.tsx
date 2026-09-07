@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { CallTarget, Memorial } from '../types/memorial'
-import type { FocalFrame } from '../utils/focalPoint'
+import type { DualFraming } from '../utils/focalPoint'
 import {
   deleteCallTarget,
   deletePhoto,
@@ -124,12 +124,12 @@ export function EditMemorialView() {
     }
   }
 
-  const handleFocalChange = async (mediaId: string, focal: FocalFrame) => {
+  const handleFocalChange = async (mediaId: string, framing: DualFraming) => {
     if (!editToken || !memorial) return
     setSaving(true)
     setError(null)
     try {
-      const updated = await updateMediaFocalPoint(editToken, mediaId, focal)
+      const updated = await updateMediaFocalPoint(editToken, mediaId, framing)
       setMemorial({
         ...memorial,
         targets: memorial.targets.map((target) => ({
@@ -141,6 +141,13 @@ export function EditMemorialView() {
                   focalX: updated.focalX,
                   focalY: updated.focalY,
                   focalZoom: updated.focalZoom,
+                  cropWidth: updated.cropWidth,
+                  cropHeight: updated.cropHeight,
+                  landscapeFocalX: updated.landscapeFocalX,
+                  landscapeFocalY: updated.landscapeFocalY,
+                  landscapeFocalZoom: updated.landscapeFocalZoom,
+                  landscapeCropWidth: updated.landscapeCropWidth,
+                  landscapeCropHeight: updated.landscapeCropHeight,
                 }
               : photo,
           ),

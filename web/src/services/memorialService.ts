@@ -16,8 +16,11 @@ import {
   DEFAULT_FOCAL_X,
   DEFAULT_FOCAL_Y,
   DEFAULT_FOCAL_ZOOM,
+  type DualFraming,
   type FocalFrame,
+  defaultDualFramingForImage,
   focalFrameFromValues,
+  hasStoredLandscapeFraming,
 } from '../utils/focalPoint'
 
 const DEMO_STORE_KEY = 'memorial-call-demo-store'
@@ -108,6 +111,86 @@ function memorialPhotoPublicUrl(storagePath: string): string {
   return data.publicUrl
 }
 
+function portraitFramingFromRecord(m: Record<string, unknown>): FocalFrame {
+  return focalFrameFromValues(
+    m.focal_x ?? m.focalX,
+    m.focal_y ?? m.focalY,
+    m.focal_zoom ?? m.focalZoom,
+    m.focal_crop_w ?? m.focalCropW ?? m.cropWidth,
+    m.focal_crop_h ?? m.focalCropH ?? m.cropHeight,
+  )
+}
+
+function landscapeFramingFromRecord(m: Record<string, unknown>): FocalFrame | null {
+  if (
+    !hasStoredLandscapeFraming(
+      m.landscape_focal_x ?? m.landscapeFocalX,
+      m.landscape_focal_y ?? m.landscapeFocalY,
+      m.landscape_focal_zoom ?? m.landscapeFocalZoom,
+      m.landscape_focal_crop_w ?? m.landscapeCropW ?? m.landscapeCropWidth,
+      m.landscape_focal_crop_h ?? m.landscapeCropH ?? m.landscapeCropHeight,
+    )
+  ) {
+    return null
+  }
+
+  return focalFrameFromValues(
+    m.landscape_focal_x ?? m.landscapeFocalX,
+    m.landscape_focal_y ?? m.landscapeFocalY,
+    m.landscape_focal_zoom ?? m.landscapeFocalZoom,
+    m.landscape_focal_crop_w ?? m.landscapeCropW ?? m.landscapeCropWidth,
+    m.landscape_focal_crop_h ?? m.landscapeCropH ?? m.landscapeCropHeight,
+  )
+}
+
+export function dualFramingFromMediaAsset(
+  asset: MediaAsset,
+  imageAspect?: number,
+  preferWideFrame = false,
+): DualFraming {
+  const portrait = focalFrameFromValues(
+    asset.focalX,
+    asset.focalY,
+    asset.focalZoom,
+    asset.cropWidth,
+    asset.cropHeight,
+  )
+
+  const hasLandscape =
+    asset.landscapeFocalX != null ||
+    asset.landscapeFocalY != null ||
+    asset.landscapeFocalZoom != null ||
+    asset.landscapeCropWidth != null ||
+    asset.landscapeCropHeight != null
+
+  const landscape = hasLandscape
+    ? focalFrameFromValues(
+        asset.landscapeFocalX,
+        asset.landscapeFocalY,
+        asset.landscapeFocalZoom,
+        asset.landscapeCropWidth,
+        asset.landscapeCropHeight,
+      )
+    : imageAspect != null
+      ? defaultDualFramingForImage(imageAspect, preferWideFrame).landscape
+      : focalFrameFromValues()
+
+  return { portrait, landscape }
+}
+
+function applyDualFramingToAsset(asset: MediaAsset, framing: DualFraming): void {
+  asset.focalX = framing.portrait.focalX
+  asset.focalY = framing.portrait.focalY
+  asset.focalZoom = framing.portrait.focalZoom
+  asset.cropWidth = framing.portrait.cropWidth
+  asset.cropHeight = framing.portrait.cropHeight
+  asset.landscapeFocalX = framing.landscape.focalX
+  asset.landscapeFocalY = framing.landscape.focalY
+  asset.landscapeFocalZoom = framing.landscape.focalZoom
+  asset.landscapeCropWidth = framing.landscape.cropWidth
+  asset.landscapeCropHeight = framing.landscape.cropHeight
+}
+
 function mapRpcMedia(m: Record<string, unknown>): MediaAsset {
   const storagePath = String(m.storage_path ?? m.storagePath ?? '')
   const storedUrl = (m.public_url ?? m.publicUrl) as string | undefined
@@ -115,11 +198,8 @@ function mapRpcMedia(m: Record<string, unknown>): MediaAsset {
     storagePath && !storagePath.startsWith('demo/')
       ? memorialPhotoPublicUrl(storagePath)
       : (storedUrl ?? '')
-  const focal = focalFrameFromValues(
-    m.focal_x ?? m.focalX,
-    m.focal_y ?? m.focalY,
-    m.focal_zoom ?? m.focalZoom,
-  )
+  const portrait = portraitFramingFromRecord(m)
+  const landscape = landscapeFramingFromRecord(m)
 
   return {
     id: String(m.id ?? ''),
@@ -127,9 +207,16 @@ function mapRpcMedia(m: Record<string, unknown>): MediaAsset {
     storagePath,
     reactionTag: (m.reaction_tag ?? m.reactionTag ?? null) as string | null,
     sortOrder: Number(m.sort_order ?? m.sortOrder ?? 0),
-    focalX: focal.focalX,
-    focalY: focal.focalY,
-    focalZoom: focal.focalZoom,
+    focalX: portrait.focalX,
+    focalY: portrait.focalY,
+    focalZoom: portrait.focalZoom,
+    cropWidth: portrait.cropWidth,
+    cropHeight: portrait.cropHeight,
+    landscapeFocalX: landscape?.focalX,
+    landscapeFocalY: landscape?.focalY,
+    landscapeFocalZoom: landscape?.focalZoom,
+    landscapeCropWidth: landscape?.cropWidth,
+    landscapeCropHeight: landscape?.cropHeight,
   }
 }
 
@@ -427,7 +514,7 @@ export async function uploadPhoto(
   target: UploadPhotoTarget,
   file: File,
   mediaSortOrder: number,
-  focal?: FocalFrame,
+  framing?: DualFraming,
 ): Promise<PhotoUploadResult> {
   if (isDemoMode()) return demoAddPhoto(editToken, target, file, mediaSortOrder)
 
@@ -470,9 +557,16 @@ export async function uploadPhoto(
     p_public_url: urlData.publicUrl,
     p_sort_order: mediaSortOrder,
     p_reaction_tag: null,
-    p_focal_x: focal?.focalX ?? DEFAULT_FOCAL_X,
-    p_focal_y: focal?.focalY ?? DEFAULT_FOCAL_Y,
-    p_focal_zoom: focal?.focalZoom ?? DEFAULT_FOCAL_ZOOM,
+    p_focal_x: framing?.portrait.focalX ?? DEFAULT_FOCAL_X,
+    p_focal_y: framing?.portrait.focalY ?? DEFAULT_FOCAL_Y,
+    p_focal_zoom: framing?.portrait.focalZoom ?? DEFAULT_FOCAL_ZOOM,
+    p_focal_crop_w: framing?.portrait.cropWidth ?? null,
+    p_focal_crop_h: framing?.portrait.cropHeight ?? null,
+    p_landscape_focal_x: framing?.landscape.focalX ?? null,
+    p_landscape_focal_y: framing?.landscape.focalY ?? null,
+    p_landscape_focal_zoom: framing?.landscape.focalZoom ?? null,
+    p_landscape_focal_crop_w: framing?.landscape.cropWidth ?? null,
+    p_landscape_focal_crop_h: framing?.landscape.cropHeight ?? null,
   })
   if (error) {
     await supabase.storage.from('memorial-photos').remove([storagePath])
@@ -503,7 +597,7 @@ export async function uploadPhoto(
 function demoUpdateMediaFocalPoint(
   editToken: string,
   mediaId: string,
-  focal: FocalFrame,
+  framing: DualFraming,
 ): MediaAsset {
   const store = readDemoStore()
   const memorial = store.memorials.find((m) => m.editToken === editToken)
@@ -512,9 +606,7 @@ function demoUpdateMediaFocalPoint(
   for (const target of memorial.targets) {
     const asset = target.media.find((m) => m.id === mediaId)
     if (asset) {
-      asset.focalX = focal.focalX
-      asset.focalY = focal.focalY
-      asset.focalZoom = focal.focalZoom
+      applyDualFramingToAsset(asset, framing)
       writeDemoStore(store)
       return asset
     }
@@ -525,17 +617,24 @@ function demoUpdateMediaFocalPoint(
 export async function updateMediaFocalPoint(
   editToken: string,
   mediaId: string,
-  focal: FocalFrame,
+  framing: DualFraming,
 ): Promise<MediaAsset> {
-  if (isDemoMode()) return demoUpdateMediaFocalPoint(editToken, mediaId, focal)
+  if (isDemoMode()) return demoUpdateMediaFocalPoint(editToken, mediaId, framing)
 
   const supabase = getSupabase()!
   const { data, error } = await supabase.rpc('update_media_focal_point', {
     p_edit_token: editToken,
     p_media_id: mediaId,
-    p_focal_x: focal.focalX,
-    p_focal_y: focal.focalY,
-    p_focal_zoom: focal.focalZoom,
+    p_focal_x: framing.portrait.focalX,
+    p_focal_y: framing.portrait.focalY,
+    p_focal_zoom: framing.portrait.focalZoom,
+    p_focal_crop_w: framing.portrait.cropWidth ?? null,
+    p_focal_crop_h: framing.portrait.cropHeight ?? null,
+    p_landscape_focal_x: framing.landscape.focalX,
+    p_landscape_focal_y: framing.landscape.focalY,
+    p_landscape_focal_zoom: framing.landscape.focalZoom,
+    p_landscape_focal_crop_w: framing.landscape.cropWidth ?? null,
+    p_landscape_focal_crop_h: framing.landscape.cropHeight ?? null,
   })
   if (error) throw new Error(formatRpcError(error, 'Failed to save focus point'))
 
@@ -677,6 +776,13 @@ export function memorialToCallProfile(
     focalX: m.focalX,
     focalY: m.focalY,
     focalZoom: m.focalZoom,
+    cropWidth: m.cropWidth,
+    cropHeight: m.cropHeight,
+    landscapeFocalX: m.landscapeFocalX,
+    landscapeFocalY: m.landscapeFocalY,
+    landscapeFocalZoom: m.landscapeFocalZoom,
+    landscapeCropWidth: m.landscapeCropWidth,
+    landscapeCropHeight: m.landscapeCropHeight,
   }))
 
   return {

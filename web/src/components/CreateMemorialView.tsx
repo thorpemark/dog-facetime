@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { CallTargetKind, Memorial } from '../types/memorial'
-import type { FocalFrame } from '../utils/focalPoint'
+import type { DualFraming } from '../utils/focalPoint'
 import { useAuth } from '../context/AuthContext'
 import { addPendingClaim } from '../lib/pendingMemorials'
 import {
@@ -232,7 +232,7 @@ export function CreateMemorialView() {
 
   const handleFocalChange = async (
     mediaId: string,
-    focal: FocalFrame,
+    framing: DualFraming,
     setDraft: React.Dispatch<React.SetStateAction<TargetDraft>>,
   ) => {
     setLoading(true)
@@ -242,7 +242,7 @@ export function CreateMemorialView() {
       if (!m.editToken) {
         throw new Error('Memorial is not ready yet.')
       }
-      const updated = await updateMediaFocalPoint(m.editToken, mediaId, focal)
+      const updated = await updateMediaFocalPoint(m.editToken, mediaId, framing)
       setDraft((prev) => ({
         ...prev,
         photos: prev.photos.map((photo) =>
@@ -252,6 +252,13 @@ export function CreateMemorialView() {
                 focalX: updated.focalX,
                 focalY: updated.focalY,
                 focalZoom: updated.focalZoom,
+                cropWidth: updated.cropWidth,
+                cropHeight: updated.cropHeight,
+                landscapeFocalX: updated.landscapeFocalX,
+                landscapeFocalY: updated.landscapeFocalY,
+                landscapeFocalZoom: updated.landscapeFocalZoom,
+                landscapeCropWidth: updated.landscapeCropWidth,
+                landscapeCropHeight: updated.landscapeCropHeight,
               }
             : photo,
         ),

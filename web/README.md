@@ -127,12 +127,12 @@ Uploaded photos are shown with a respectful “alive” presentation:
 
 **Portrait framing (focal frame):**
 
-- On create/edit, tap a photo to drag a crop frame over the image and zoom out to include more width for two-shots
-- Stored per photo as normalized `focal_x` / `focal_y` (frame center) and `focal_zoom` (1 = full-bleed portrait cover; >1 zooms out toward landscape letterbox)
-- At zoom ≈ 1 the call screen uses full-bleed portrait cover centered on the focal point; as zoom increases the visible crop widens and its aspect moves toward the photo’s native aspect, producing top/bottom letterboxing on the portrait call screen (like viewing a landscape photo on an iPhone)
-- Focal pan and zoom compose: drag repositions the crop while zoomed out; all three values persist
-- Together / group photos default to a slightly zoomed-out frame on landscape images
-- Existing Supabase projects: run [`supabase/migration_focal_point.sql`](supabase/migration_focal_point.sql) then [`supabase/migration_focal_zoom.sql`](supabase/migration_focal_zoom.sql) after the base migration
+- On create/edit, tap a photo to set **two saved crops**: phone portrait and landscape/PC
+- Resize with corner/edge handles (width and height), pan with Move frame, tap to focus, and nudge with arrows
+- Stored per photo as portrait `focal_x` / `focal_y` / optional `focal_crop_w` / `focal_crop_h` plus landscape `landscape_focal_*` columns (legacy `focal_zoom` kept as derived metadata)
+- During calls, the app picks the matching framing when the viewport is portrait vs landscape (phone rotation or desktop widescreen)
+- Together / group photos default to slightly wider framing on landscape images
+- Existing Supabase projects: run [`supabase/migration_focal_point.sql`](supabase/migration_focal_point.sql), [`supabase/migration_focal_zoom.sql`](supabase/migration_focal_zoom.sql), [`supabase/migration_focal_crop.sql`](supabase/migration_focal_crop.sql), then [`supabase/migration_focal_orientation.sql`](supabase/migration_focal_orientation.sql) after the base migration
 
 Without uploaded photos, placeholder MP4 clips from `public/clips/` are used.
 

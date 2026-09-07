@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react'
 import { useMemorialCall } from '../context/MemorialCallContext'
+import { useDisplayOrientation } from '../hooks/useDisplayOrientation'
+import { focalForOrientation } from '../utils/focalPoint'
 import { FocalPhotoLayer } from './FocalPhotoLayer'
 
 function photoLayerWrapperStyle(
@@ -11,6 +13,7 @@ function photoLayerWrapperStyle(
 
 export function DualMediaView() {
   const { mediaPlayback } = useMemorialCall()
+  const displayOrientation = useDisplayOrientation()
   const {
     mode,
     primaryRef,
@@ -33,28 +36,35 @@ export function DualMediaView() {
   } as CSSProperties
 
   if (mode === 'photos') {
+    const primaryFocal = focalForOrientation(primaryPhoto, displayOrientation)
+    const secondaryFocal = secondaryPhoto
+      ? focalForOrientation(secondaryPhoto, displayOrientation)
+      : null
+
     return (
       <div className="dual-video dual-media" style={kenBurnsStyle}>
         <div
-          key={`primary-${primaryPhoto.url}-${primaryMotionKey}`}
+          key={`primary-${primaryPhoto.url}-${displayOrientation}-${primaryMotionKey}`}
           className="photo-layer"
           style={photoLayerWrapperStyle(primaryOpacity, transition)}
         >
           <FocalPhotoLayer
             imageUrl={primaryPhoto.url}
-            focal={primaryPhoto}
+            focal={primaryFocal}
+            displayOrientation={displayOrientation}
             motionClassName={`photo-layer-media motion-${primaryMotion}`}
           />
         </div>
-        {secondaryPhoto?.url && (
+        {secondaryPhoto?.url && secondaryFocal && (
           <div
-            key={`secondary-${secondaryPhoto.url}-${secondaryMotionKey}`}
+            key={`secondary-${secondaryPhoto.url}-${displayOrientation}-${secondaryMotionKey}`}
             className="photo-layer"
             style={photoLayerWrapperStyle(secondaryOpacity, transition)}
           >
             <FocalPhotoLayer
               imageUrl={secondaryPhoto.url}
-              focal={secondaryPhoto}
+              focal={secondaryFocal}
+              displayOrientation={displayOrientation}
               motionClassName={`photo-layer-media motion-${secondaryMotion}`}
             />
           </div>

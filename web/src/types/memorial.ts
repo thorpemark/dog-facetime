@@ -12,6 +12,16 @@ export interface MediaAsset {
   focalY: number
   /** Zoom-out factor for portrait cover crop (1 = default cover). */
   focalZoom: number
+  /** Normalized crop width (fraction of image width); optional legacy zoom fallback when absent. */
+  cropWidth?: number
+  /** Normalized crop height (fraction of image height); optional legacy zoom fallback when absent. */
+  cropHeight?: number
+  /** Landscape / desktop widescreen framing (nullable until saved). */
+  landscapeFocalX?: number
+  landscapeFocalY?: number
+  landscapeFocalZoom?: number
+  landscapeCropWidth?: number
+  landscapeCropHeight?: number
 }
 
 export interface CallTarget {
@@ -53,8 +63,19 @@ export interface CallSessionProfile {
   memorialTitle: string
   targetKind: CallTargetKind
   photoUrls: string[]
-  /** Per-photo focal points aligned with photoUrls. */
-  photoFocalPoints?: Array<{ focalX: number; focalY: number; focalZoom?: number }>
+  /** Per-photo framing aligned with photoUrls. */
+  photoFocalPoints?: Array<{
+    focalX: number
+    focalY: number
+    focalZoom?: number
+    cropWidth?: number
+    cropHeight?: number
+    landscapeFocalX?: number
+    landscapeFocalY?: number
+    landscapeFocalZoom?: number
+    landscapeCropWidth?: number
+    landscapeCropHeight?: number
+  }>
   /** Future: per-reaction video clip URLs keyed by rule id */
   reactionMedia?: Record<string, string>
 }

@@ -4,46 +4,101 @@ import {
   DEFAULT_FOCAL_Y,
   DEFAULT_FOCAL_ZOOM,
   computeContainBounds,
+  defaultDualFramingForImage,
   defaultFocalFrameForImage,
-  focalFrameFromCenterAndZoom,
-  focalFrameFromValues,
+  focalFrameFromCenter,
   frameRectFromFocal,
-  hasCustomFocalFrame,
+  frameSizeFromFocal,
+  hasCustomDualFraming,
   isLandscapeImage,
-  maxFocalZoom,
   nudgeFocalCenter,
+  normalizedFrameRectFromFocal,
+  resizeCropRect,
+  focalFrameFromNormalizedRect,
+  viewportAspectForOrientation,
+  type CropResizeHandle,
+  type DisplayOrientation,
+  type DualFraming,
   type FocalFrame,
+  type FrameRect,
   type ImageBounds,
 } from '../utils/focalPoint'
 import { FocalCallPreview } from './FocalCallPreview'
 
 const TAP_THRESHOLD_PX = 8
 
+const ORIENTATION_TABS: Array<{
+  id: DisplayOrientation
+  label: string
+}> = [
+  { id: 'portrait', label: 'Phone portrait' },
+  { id: 'landscape', label: 'Landscape / PC' },
+]
+
+const CROP_HANDLES: Array<{ handle: CropResizeHandle; className: string; label: string }> = [
+  { handle: 'nw', className: 'focal-crop-handle--nw', label: 'Resize top-left' },
+  { handle: 'n', className: 'focal-crop-handle--n', label: 'Resize top edge' },
+  { handle: 'ne', className: 'focal-crop-handle--ne', label: 'Resize top-right' },
+  { handle: 'e', className: 'focal-crop-handle--e', label: 'Resize right edge' },
+  { handle: 'se', className: 'focal-crop-handle--se', label: 'Resize bottom-right' },
+  { handle: 's', className: 'focal-crop-handle--s', label: 'Resize bottom edge' },
+  { handle: 'sw', className: 'focal-crop-handle--sw', label: 'Resize bottom-left' },
+  { handle: 'w', className: 'focal-crop-handle--w', label: 'Resize left edge' },
+]
+
 interface PhotoFocalEditorProps {
   imageUrl: string
-  initialFocal?: FocalFrame
-  onSave: (focal: FocalFrame) => void | Promise<void>
+  initialFraming?: DualFraming
+  onSave: (framing: DualFraming) => void | Promise<void>
   onClose: () => void
   saving?: boolean
   /** Hint wider default framing for together / group shots. */
   preferWideFrame?: boolean
 }
 
+function clientToNormalized(
+  clientX: number,
+  clientY: number,
+  canvasRect: DOMRect,
+  imageBounds: ImageBounds,
+): { x: number; y: number } | null {
+  const localX = clientX - canvasRect.left
+  const localY = clientY - canvasRect.top
+  if (
+    localX < imageBounds.left ||
+    localX > imageBounds.left + imageBounds.width ||
+    localY < imageBounds.top ||
+    localY > imageBounds.top + imageBounds.height
+  ) {
+    return null
+  }
+
+  return {
+    x: (localX - imageBounds.left) / imageBounds.width,
+    y: (localY - imageBounds.top) / imageBounds.height,
+  }
+}
+
+function emptyFraming(): DualFraming {
+  const frame = {
+    focalX: DEFAULT_FOCAL_X,
+    focalY: DEFAULT_FOCAL_Y,
+    focalZoom: DEFAULT_FOCAL_ZOOM,
+  }
+  return { portrait: frame, landscape: frame }
+}
+
 export function PhotoFocalEditor({
   imageUrl,
-  initialFocal,
+  initialFraming,
   onSave,
   onClose,
   saving = false,
   preferWideFrame = false,
 }: PhotoFocalEditorProps) {
-  const [focal, setFocal] = useState<FocalFrame>(
-    initialFocal ?? {
-      focalX: DEFAULT_FOCAL_X,
-      focalY: DEFAULT_FOCAL_Y,
-      focalZoom: DEFAULT_FOCAL_ZOOM,
-    },
-  )
+  const [framing, setFraming] = useState<DualFraming>(initialFraming ?? emptyFraming())
+  const [activeOrientation, setActiveOrientation] =
+    useState<DisplayOrientation>('portrait')
   const [imageBounds, setImageBounds] = useState<ImageBounds | null>(null)
   const [imageAspect, setImageAspect] = useState(1)
   const [moveFrameMode, setMoveFrameMode] = useState(true)
@@ -52,16 +107,31 @@ export function PhotoFocalEditor({
   const didDragRef = useRef(false)
   const panOffsetRef = useRef({ x: 0, y: 0 })
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
+  const resizeHandleRef = useRef<CropResizeHandle | null>(null)
+  const resizeStartRectRef = useRef<FrameRect | null>(null)
+
+  const viewportAspect = viewportAspectForOrientation(activeOrientation)
+  const focal = framing[activeOrientation]
 
   useEffect(() => {
-    setFocal(
-      initialFocal ?? {
-        focalX: DEFAULT_FOCAL_X,
-        focalY: DEFAULT_FOCAL_Y,
-        focalZoom: DEFAULT_FOCAL_ZOOM,
-      },
-    )
-  }, [imageUrl, initialFocal])
+    setFraming(initialFraming ?? emptyFraming())
+    setActiveOrientation('portrait')
+  }, [imageUrl, initialFraming])
+
+  const setActiveFocal = useCallback(
+    (updater: FocalFrame | ((current: FocalFrame) => FocalFrame)) => {
+      setFraming((current) => {
+        const orientationFrame = current[activeOrientation]
+        const next =
+          typeof updater === 'function' ? updater(orientationFrame) : updater
+        return {
+          ...current,
+          [activeOrientation]: next,
+        }
+      })
+    },
+    [activeOrientation],
+  )
 
   const refreshImageBounds = useCallback(() => {
     const canvas = canvasRef.current
@@ -88,11 +158,11 @@ export function PhotoFocalEditor({
       setImageAspect(aspect)
       refreshImageBounds()
 
-      if (!initialFocal || !hasCustomFocalFrame(initialFocal)) {
-        setFocal(defaultFocalFrameForImage(aspect, preferWideFrame))
+      if (!initialFraming || !hasCustomDualFraming(initialFraming, aspect, preferWideFrame)) {
+        setFraming(defaultDualFramingForImage(aspect, preferWideFrame))
       }
     },
-    [initialFocal, preferWideFrame, refreshImageBounds],
+    [initialFraming, preferWideFrame, refreshImageBounds],
   )
 
   useEffect(() => {
@@ -107,21 +177,22 @@ export function PhotoFocalEditor({
       const rect = canvasRef.current?.getBoundingClientRect()
       if (!rect) return
 
-      const localX = clientX - rect.left
-      const localY = clientY - rect.top
-      const centerX = (localX - imageBounds.left) / imageBounds.width
-      const centerY = (localY - imageBounds.top) / imageBounds.height
+      const point = clientToNormalized(clientX, clientY, rect, imageBounds)
+      if (!point) return
 
-      setFocal((current) =>
-        focalFrameFromCenterAndZoom(
-          centerX,
-          centerY,
-          current.focalZoom,
+      setActiveFocal((current) => {
+        const size = frameSizeFromFocal(current, imageAspect, viewportAspect)
+        return focalFrameFromCenter(
+          point.x,
+          point.y,
+          size.width,
+          size.height,
           imageAspect,
-        ),
-      )
+          viewportAspect,
+        )
+      })
     },
-    [imageAspect, imageBounds],
+    [imageAspect, imageBounds, setActiveFocal, viewportAspect],
   )
 
   const updateFromPan = useCallback(
@@ -137,16 +208,39 @@ export function PhotoFocalEditor({
         (clientY - rect.top - imageBounds.top - panOffsetRef.current.y) /
         imageBounds.height
 
-      setFocal((current) =>
-        focalFrameFromCenterAndZoom(
+      setActiveFocal((current) => {
+        const size = frameSizeFromFocal(current, imageAspect, viewportAspect)
+        return focalFrameFromCenter(
           centerX,
           centerY,
-          current.focalZoom,
+          size.width,
+          size.height,
           imageAspect,
-        ),
+          viewportAspect,
+        )
+      })
+    },
+    [imageAspect, imageBounds, setActiveFocal, viewportAspect],
+  )
+
+  const updateFromResize = useCallback(
+    (clientX: number, clientY: number) => {
+      const handle = resizeHandleRef.current
+      const startRect = resizeStartRectRef.current
+      if (!handle || !startRect || !imageBounds) return
+
+      const rect = canvasRef.current?.getBoundingClientRect()
+      if (!rect) return
+
+      const point = clientToNormalized(clientX, clientY, rect, imageBounds)
+      if (!point) return
+
+      const nextRect = resizeCropRect(startRect, handle, point.x, point.y)
+      setActiveFocal(
+        focalFrameFromNormalizedRect(nextRect, imageAspect, viewportAspect),
       )
     },
-    [imageAspect, imageBounds],
+    [imageAspect, imageBounds, setActiveFocal, viewportAspect],
   )
 
   const isInsideImage = useCallback(
@@ -154,15 +248,7 @@ export function PhotoFocalEditor({
       if (!imageBounds) return false
       const rect = canvasRef.current?.getBoundingClientRect()
       if (!rect) return false
-
-      const localX = clientX - rect.left
-      const localY = clientY - rect.top
-      return (
-        localX >= imageBounds.left &&
-        localX <= imageBounds.left + imageBounds.width &&
-        localY >= imageBounds.top &&
-        localY <= imageBounds.top + imageBounds.height
-      )
+      return clientToNormalized(clientX, clientY, rect, imageBounds) != null
     },
     [imageBounds],
   )
@@ -177,12 +263,19 @@ export function PhotoFocalEditor({
       pointerStartRef.current = { x: event.clientX, y: event.clientY }
       didDragRef.current = false
       isDraggingRef.current = false
+      resizeHandleRef.current = null
+      resizeStartRectRef.current = null
 
       if (moveFrameMode) {
         const rect = canvasRef.current?.getBoundingClientRect()
         if (!rect) return
 
-        const frameRect = frameRectFromFocal(focal, imageBounds, imageAspect)
+        const frameRect = frameRectFromFocal(
+          focal,
+          imageBounds,
+          imageAspect,
+          viewportAspect,
+        )
         const frameCenterX = rect.left + frameRect.left + frameRect.width / 2
         const frameCenterY = rect.top + frameRect.top + frameRect.height / 2
         panOffsetRef.current = {
@@ -191,17 +284,27 @@ export function PhotoFocalEditor({
         }
       }
     },
-    [focal, imageAspect, imageBounds, isInsideImage, moveFrameMode],
+    [focal, imageAspect, imageBounds, isInsideImage, moveFrameMode, viewportAspect],
   )
 
   const handlePointerMove = useCallback(
     (event: React.PointerEvent) => {
-      if (!pointerStartRef.current || !moveFrameMode) return
+      if (!pointerStartRef.current) return
 
       const dx = event.clientX - pointerStartRef.current.x
       const dy = event.clientY - pointerStartRef.current.y
       const distance = Math.hypot(dx, dy)
 
+      if (resizeHandleRef.current) {
+        if (distance < TAP_THRESHOLD_PX) return
+        event.preventDefault()
+        didDragRef.current = true
+        isDraggingRef.current = true
+        updateFromResize(event.clientX, event.clientY)
+        return
+      }
+
+      if (!moveFrameMode) return
       if (!didDragRef.current && distance < TAP_THRESHOLD_PX) return
 
       event.preventDefault()
@@ -209,32 +312,92 @@ export function PhotoFocalEditor({
       isDraggingRef.current = true
       updateFromPan(event.clientX, event.clientY)
     },
-    [moveFrameMode, updateFromPan],
+    [moveFrameMode, updateFromPan, updateFromResize],
   )
 
-  const handlePointerUp = useCallback(
+  const endPointerInteraction = useCallback(
     (event: React.PointerEvent) => {
       if (!pointerStartRef.current) return
 
-      if (!didDragRef.current && isInsideImage(event.clientX, event.clientY)) {
+      if (
+        !didDragRef.current &&
+        !resizeHandleRef.current &&
+        moveFrameMode &&
+        isInsideImage(event.clientX, event.clientY)
+      ) {
         setFocalFromClient(event.clientX, event.clientY)
       }
 
       pointerStartRef.current = null
       isDraggingRef.current = false
       didDragRef.current = false
+      resizeHandleRef.current = null
+      resizeStartRectRef.current = null
 
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
         event.currentTarget.releasePointerCapture(event.pointerId)
       }
     },
-    [isInsideImage, setFocalFromClient],
+    [isInsideImage, moveFrameMode, setFocalFromClient],
   )
 
-  const handlePointerCancel = useCallback((event: React.PointerEvent) => {
+  const handlePointerUp = useCallback(
+    (event: React.PointerEvent) => {
+      endPointerInteraction(event)
+    },
+    [endPointerInteraction],
+  )
+
+  const handlePointerCancel = useCallback(
+    (event: React.PointerEvent) => {
+      endPointerInteraction(event)
+    },
+    [endPointerInteraction],
+  )
+
+  const handleHandlePointerDown = useCallback(
+    (event: React.PointerEvent, handle: CropResizeHandle) => {
+      if (!imageBounds || event.button !== 0) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      event.currentTarget.setPointerCapture(event.pointerId)
+
+      pointerStartRef.current = { x: event.clientX, y: event.clientY }
+      didDragRef.current = false
+      isDraggingRef.current = false
+      resizeHandleRef.current = handle
+      resizeStartRectRef.current = normalizedFrameRectFromFocal(
+        focal,
+        imageAspect,
+        viewportAspect,
+      )
+    },
+    [focal, imageAspect, imageBounds, viewportAspect],
+  )
+
+  const handleHandlePointerMove = useCallback(
+    (event: React.PointerEvent) => {
+      if (!resizeHandleRef.current || !pointerStartRef.current) return
+
+      const dx = event.clientX - pointerStartRef.current.x
+      const dy = event.clientY - pointerStartRef.current.y
+      if (!didDragRef.current && Math.hypot(dx, dy) < TAP_THRESHOLD_PX) return
+
+      event.preventDefault()
+      didDragRef.current = true
+      isDraggingRef.current = true
+      updateFromResize(event.clientX, event.clientY)
+    },
+    [updateFromResize],
+  )
+
+  const handleHandlePointerUp = useCallback((event: React.PointerEvent) => {
     pointerStartRef.current = null
     isDraggingRef.current = false
     didDragRef.current = false
+    resizeHandleRef.current = null
+    resizeStartRectRef.current = null
 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId)
@@ -243,32 +406,34 @@ export function PhotoFocalEditor({
 
   const handleNudge = useCallback(
     (deltaX: number, deltaY: number) => {
-      setFocal((current) => nudgeFocalCenter(current, deltaX, deltaY, imageAspect))
-    },
-    [imageAspect],
-  )
-
-  const handleZoomChange = useCallback(
-    (value: number) => {
-      setFocal((current) =>
-        focalFrameFromCenterAndZoom(
-          current.focalX,
-          current.focalY,
-          value,
+      setActiveFocal((current) =>
+        nudgeFocalCenter(
+          current,
+          deltaX,
+          deltaY,
           imageAspect,
+          viewportAspect,
         ),
       )
     },
-    [imageAspect],
+    [imageAspect, setActiveFocal, viewportAspect],
   )
 
   const handleReset = useCallback(() => {
-    setFocal(defaultFocalFrameForImage(imageAspect, false))
-  }, [imageAspect])
+    setFraming((current) => ({
+      ...current,
+      [activeOrientation]: defaultFocalFrameForImage(
+        imageAspect,
+        viewportAspect,
+        preferWideFrame,
+      ),
+    }))
+  }, [activeOrientation, imageAspect, preferWideFrame, viewportAspect])
 
   const frameRect =
-    imageBounds ? frameRectFromFocal(focal, imageBounds, imageAspect) : null
-  const maxZoom = maxFocalZoom(imageAspect)
+    imageBounds
+      ? frameRectFromFocal(focal, imageBounds, imageAspect, viewportAspect)
+      : null
   const showWideHint = preferWideFrame || isLandscapeImage(imageAspect)
   const crosshairLeft = frameRect
     ? frameRect.left + frameRect.width / 2
@@ -286,7 +451,7 @@ export function PhotoFocalEditor({
         onClick={(event) => event.stopPropagation()}
       >
         <header className="focal-editor-header">
-          <h2 id="focal-editor-title">Frame portrait crop</h2>
+          <h2 id="focal-editor-title">Frame call crop</h2>
           <button type="button" className="focal-editor-close" onClick={onClose}>
             ✕
           </button>
@@ -294,9 +459,28 @@ export function PhotoFocalEditor({
 
         <p className="focal-editor-lead">
           {showWideHint
-            ? 'Turn on Move frame and drag to pan, or tap the photo to set focus. Use the arrows if drag is awkward. Zoom out to widen the crop for two-shots.'
-            : 'Turn on Move frame and drag to pan, or tap the photo to set focus. Use the arrows if drag is awkward. Zoom out to reveal more of the photo.'}
+            ? 'Set separate crops for phone portrait and landscape/PC. Drag handles to resize, use Move frame to pan or tap to focus, and nudge for fine adjustments.'
+            : 'Set separate crops for phone portrait and landscape/PC. Drag handles to resize both axes, pan with Move frame, tap to focus, and nudge for fine adjustments.'}
         </p>
+
+        <div
+          className="focal-orientation-tabs"
+          role="tablist"
+          aria-label="Call viewport orientation"
+        >
+          {ORIENTATION_TABS.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={activeOrientation === id}
+              className={`focal-orientation-tab${activeOrientation === id ? ' focal-orientation-tab--active' : ''}`}
+              onClick={() => setActiveOrientation(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         <div className="focal-editor-toolbar">
           <button
@@ -338,7 +522,20 @@ export function PhotoFocalEditor({
                     height: `${frameRect.height}px`,
                   }}
                   aria-hidden="true"
-                />
+                >
+                  {CROP_HANDLES.map(({ handle, className, label }) => (
+                    <button
+                      key={handle}
+                      type="button"
+                      className={`focal-crop-handle ${className}`}
+                      aria-label={label}
+                      onPointerDown={(event) => handleHandlePointerDown(event, handle)}
+                      onPointerMove={handleHandlePointerMove}
+                      onPointerUp={handleHandlePointerUp}
+                      onPointerCancel={handleHandlePointerUp}
+                    />
+                  ))}
+                </div>
                 <div
                   className="focal-crosshair"
                   style={{
@@ -352,11 +549,16 @@ export function PhotoFocalEditor({
           </div>
 
           <div className="focal-preview-panel">
-            <p className="focal-preview-label">Call preview</p>
+            <p className="focal-preview-label">
+              {activeOrientation === 'portrait'
+                ? 'Phone portrait preview'
+                : 'Landscape / PC preview'}
+            </p>
             <FocalCallPreview
               imageUrl={imageUrl}
               focal={focal}
               imageAspect={imageAspect}
+              displayOrientation={activeOrientation}
             />
           </div>
         </div>
@@ -404,26 +606,6 @@ export function PhotoFocalEditor({
           </div>
         </div>
 
-        <label
-          className="focal-zoom-control"
-          onPointerDown={(event) => event.stopPropagation()}
-        >
-          <span>Zoom out</span>
-          <input
-            type="range"
-            min={DEFAULT_FOCAL_ZOOM}
-            max={maxZoom}
-            step={0.01}
-            value={focal.focalZoom}
-            onChange={(event) => handleZoomChange(Number(event.target.value))}
-            onInput={(event) =>
-              handleZoomChange(Number((event.target as HTMLInputElement).value))
-            }
-            aria-label="Zoom out to include more of the photo"
-          />
-          <span className="focal-zoom-value">{focal.focalZoom.toFixed(2)}×</span>
-        </label>
-
         <div className="focal-editor-actions">
           <button type="button" className="btn-text" onClick={onClose} disabled={saving}>
             Cancel
@@ -434,19 +616,15 @@ export function PhotoFocalEditor({
             onClick={handleReset}
             disabled={saving}
           >
-            Reset frame
+            Reset {activeOrientation === 'portrait' ? 'portrait' : 'landscape'}
           </button>
           <button
             type="button"
             className="btn-call focal-save-btn"
             disabled={saving}
-            onClick={() =>
-              void onSave(
-                focalFrameFromValues(focal.focalX, focal.focalY, focal.focalZoom),
-              )
-            }
+            onClick={() => void onSave(framing)}
           >
-            {saving ? 'Saving…' : 'Save frame'}
+            {saving ? 'Saving…' : 'Save both frames'}
           </button>
         </div>
       </div>
