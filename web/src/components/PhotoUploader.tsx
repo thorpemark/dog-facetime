@@ -121,8 +121,8 @@ export function PhotoUploader({
       {onFocalChange && photos.length > 0 && (
         <p className="photo-hint">
           {preferWideFrame
-            ? 'Tap a photo to drag the portrait frame and include both dogs on calls.'
-            : 'Tap a photo to drag the portrait frame shown on calls.'}
+            ? 'Tap a photo to resize the crop with handles and include both dogs on calls.'
+            : 'Tap a photo to resize the portrait crop shown on calls.'}
         </p>
       )}
 
