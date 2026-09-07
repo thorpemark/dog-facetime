@@ -122,21 +122,31 @@ export function PhotoFocalEditor({
 
   const handlePointerDown = useCallback(
     (event: React.PointerEvent) => {
-      if (!imageBounds) return
-      const frameRect = frameRectFromFocal(focal, imageBounds, imageAspect)
-      const insideFrame =
-        event.clientX >= frameRect.left &&
-        event.clientX <= frameRect.left + frameRect.width &&
-        event.clientY >= frameRect.top &&
-        event.clientY <= frameRect.top + frameRect.height
+      if (!imageBounds || event.button !== 0) return
 
-      if (!insideFrame) return
+      const rect = canvasRef.current?.getBoundingClientRect()
+      if (!rect) return
 
+      const localX = event.clientX - rect.left
+      const localY = event.clientY - rect.top
+      const insideImage =
+        localX >= imageBounds.left &&
+        localX <= imageBounds.left + imageBounds.width &&
+        localY >= imageBounds.top &&
+        localY <= imageBounds.top + imageBounds.height
+
+      if (!insideImage) return
+
+      event.preventDefault()
       event.currentTarget.setPointerCapture(event.pointerId)
       isDraggingRef.current = true
+
+      const frameRect = frameRectFromFocal(focal, imageBounds, imageAspect)
+      const frameCenterX = rect.left + frameRect.left + frameRect.width / 2
+      const frameCenterY = rect.top + frameRect.top + frameRect.height / 2
       panOffsetRef.current = {
-        x: event.clientX - (frameRect.left + frameRect.width / 2),
-        y: event.clientY - (frameRect.top + frameRect.height / 2),
+        x: event.clientX - frameCenterX,
+        y: event.clientY - frameCenterY,
       }
       updateFromPan(event.clientX, event.clientY)
     },
@@ -146,6 +156,7 @@ export function PhotoFocalEditor({
   const handlePointerMove = useCallback(
     (event: React.PointerEvent) => {
       if (!isDraggingRef.current) return
+      event.preventDefault()
       updateFromPan(event.clientX, event.clientY)
     },
     [updateFromPan],
@@ -212,6 +223,7 @@ export function PhotoFocalEditor({
               src={imageUrl}
               alt=""
               draggable={false}
+              onDragStart={(event) => event.preventDefault()}
               onLoad={handleImageLoad}
             />
             {frameRect && (
