@@ -1,9 +1,6 @@
 import type { CSSProperties } from 'react'
 import { useMemorialCall } from '../context/MemorialCallContext'
-import {
-  photoLayerCoverStyle,
-  photoLayerMediaStyle,
-} from '../utils/focalPoint'
+import { FocalPhotoLayer } from './FocalPhotoLayer'
 
 function photoLayerWrapperStyle(
   opacity: number,
@@ -43,18 +40,11 @@ export function DualMediaView() {
           className="photo-layer"
           style={photoLayerWrapperStyle(primaryOpacity, transition)}
         >
-          <div
-            className="photo-layer-cover"
-            style={photoLayerCoverStyle(primaryPhoto)}
-          >
-            <img
-              className={`photo-layer-media motion-${primaryMotion}`}
-              src={primaryPhoto.url}
-              alt=""
-              draggable={false}
-              style={photoLayerMediaStyle(primaryPhoto)}
-            />
-          </div>
+          <FocalPhotoLayer
+            imageUrl={primaryPhoto.url}
+            focal={primaryPhoto}
+            motionClassName={`photo-layer-media motion-${primaryMotion}`}
+          />
         </div>
         {secondaryPhoto?.url && (
           <div
@@ -62,18 +52,11 @@ export function DualMediaView() {
             className="photo-layer"
             style={photoLayerWrapperStyle(secondaryOpacity, transition)}
           >
-            <div
-              className="photo-layer-cover"
-              style={photoLayerCoverStyle(secondaryPhoto)}
-            >
-              <img
-                className={`photo-layer-media motion-${secondaryMotion}`}
-                src={secondaryPhoto.url}
-                alt=""
-                draggable={false}
-                style={photoLayerMediaStyle(secondaryPhoto)}
-              />
-            </div>
+            <FocalPhotoLayer
+              imageUrl={secondaryPhoto.url}
+              focal={secondaryPhoto}
+              motionClassName={`photo-layer-media motion-${secondaryMotion}`}
+            />
           </div>
         )}
       </div>
