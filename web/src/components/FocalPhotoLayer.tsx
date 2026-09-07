@@ -12,13 +12,13 @@ interface FocalPhotoLayerProps {
   focal: FocalFrame
   /** Known image aspect (width/height); refined on image load when omitted. */
   imageAspect?: number
-  /** Call viewport orientation used for letterboxing math. */
+  /** Call viewport orientation used for letterbox / pillarbox math. */
   displayOrientation?: DisplayOrientation
   className?: string
   motionClassName?: string
 }
 
-/** Renders a focal-framed photo with letterboxed playback for the active viewport. */
+/** Renders a focal-framed photo with letterbox or pillarbox playback for the active viewport. */
 export function FocalPhotoLayer({
   imageUrl,
   focal,
