@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react'
 import type { MediaAsset } from '../types/memorial'
 import {
-  DEFAULT_FOCAL_X,
-  DEFAULT_FOCAL_Y,
-  DEFAULT_FOCAL_ZOOM,
-  hasCustomFocalFrame,
-  type FocalFrame,
+  hasCustomDualFraming,
+  type DualFraming,
 } from '../utils/focalPoint'
+import {
+  dualFramingFromMediaAsset,
+} from '../services/memorialService'
 import { PhotoFocalEditor } from './PhotoFocalEditor'
 
 interface PhotoUploaderProps {
@@ -14,20 +14,15 @@ interface PhotoUploaderProps {
   /** Receives a snapshot of selected files (not a live FileList). */
   onUpload: (files: File[]) => void | Promise<void>
   onDelete: (mediaId: string) => void
-  onFocalChange?: (mediaId: string, focal: FocalFrame) => void | Promise<void>
+  onFocalChange?: (mediaId: string, framing: DualFraming) => void | Promise<void>
   disabled?: boolean
   /** Wider default framing for together / group shots. */
   preferWideFrame?: boolean
 }
 
-function hasCustomFocal(photo: MediaAsset): boolean {
-  return hasCustomFocalFrame({
-    focalX: photo.focalX,
-    focalY: photo.focalY,
-    focalZoom: photo.focalZoom ?? DEFAULT_FOCAL_ZOOM,
-    cropWidth: photo.cropWidth,
-    cropHeight: photo.cropHeight,
-  })
+function hasCustomFraming(photo: MediaAsset): boolean {
+  const framing = dualFramingFromMediaAsset(photo, undefined, false)
+  return hasCustomDualFraming(framing, 1, false)
 }
 
 export function PhotoUploader({
@@ -42,11 +37,11 @@ export function PhotoUploader({
   const [editingPhoto, setEditingPhoto] = useState<MediaAsset | null>(null)
   const [savingFocal, setSavingFocal] = useState(false)
 
-  const handleSaveFocal = async (focal: FocalFrame) => {
+  const handleSaveFocal = async (framing: DualFraming) => {
     if (!editingPhoto || !onFocalChange) return
     setSavingFocal(true)
     try {
-      await onFocalChange(editingPhoto.id, focal)
+      await onFocalChange(editingPhoto.id, framing)
       setEditingPhoto(null)
     } finally {
       setSavingFocal(false)
@@ -64,15 +59,15 @@ export function PhotoUploader({
               onClick={() => onFocalChange && setEditingPhoto(photo)}
               disabled={disabled || !onFocalChange || photo.id.startsWith('pending-')}
               aria-label={
-                hasCustomFocal(photo)
-                  ? 'Edit portrait frame (custom)'
-                  : 'Set portrait frame'
+                hasCustomFraming(photo)
+                  ? 'Edit call crop (custom)'
+                  : 'Set call crop'
               }
             >
               <img src={photo.publicUrl} alt="" />
               {onFocalChange && !photo.id.startsWith('pending-') && (
                 <span
-                  className={`photo-focus-badge ${hasCustomFocal(photo) ? 'custom' : ''}`}
+                  className={`photo-focus-badge ${hasCustomFraming(photo) ? 'custom' : ''}`}
                   aria-hidden="true"
                 >
                   ⊕
@@ -121,21 +116,19 @@ export function PhotoUploader({
       {onFocalChange && photos.length > 0 && (
         <p className="photo-hint">
           {preferWideFrame
-            ? 'Tap a photo to resize the crop with handles and include both dogs on calls.'
-            : 'Tap a photo to resize the portrait crop shown on calls.'}
+            ? 'Tap a photo to set portrait and landscape/PC crops for calls.'
+            : 'Tap a photo to set portrait and landscape/PC call crops.'}
         </p>
       )}
 
       {editingPhoto && onFocalChange && (
         <PhotoFocalEditor
           imageUrl={editingPhoto.publicUrl}
-          initialFocal={{
-            focalX: editingPhoto.focalX ?? DEFAULT_FOCAL_X,
-            focalY: editingPhoto.focalY ?? DEFAULT_FOCAL_Y,
-            focalZoom: editingPhoto.focalZoom ?? DEFAULT_FOCAL_ZOOM,
-            cropWidth: editingPhoto.cropWidth,
-            cropHeight: editingPhoto.cropHeight,
-          }}
+          initialFraming={dualFramingFromMediaAsset(
+            editingPhoto,
+            undefined,
+            preferWideFrame,
+          )}
           preferWideFrame={preferWideFrame}
           onSave={handleSaveFocal}
           onClose={() => setEditingPhoto(null)}

@@ -1,4 +1,4 @@
-import type { FocalFrame } from '../utils/focalPoint'
+import type { DisplayOrientation, FocalFrame } from '../utils/focalPoint'
 import { FocalPhotoLayer } from './FocalPhotoLayer'
 
 interface FocalCallPreviewProps {
@@ -6,20 +6,28 @@ interface FocalCallPreviewProps {
   focal: FocalFrame
   /** Pass when known so preview matches before image load. */
   imageAspect?: number
+  displayOrientation?: DisplayOrientation
 }
 
-/** Live portrait preview using the same framed layout as the call screen. */
+/** Live preview using the same framed layout as the call screen. */
 export function FocalCallPreview({
   imageUrl,
   focal,
   imageAspect,
+  displayOrientation = 'portrait',
 }: FocalCallPreviewProps) {
+  const previewClass =
+    displayOrientation === 'landscape'
+      ? 'focal-preview-frame focal-preview-frame--landscape'
+      : 'focal-preview-frame'
+
   return (
-    <div className="focal-preview-frame" aria-hidden="true">
+    <div className={previewClass} aria-hidden="true">
       <FocalPhotoLayer
         imageUrl={imageUrl}
         focal={focal}
         imageAspect={imageAspect}
+        displayOrientation={displayOrientation}
         motionClassName="focal-preview-media"
       />
     </div>

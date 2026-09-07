@@ -4,8 +4,11 @@ export const DEFAULT_FOCAL_X = 0.5
 export const DEFAULT_FOCAL_Y = 0.5
 export const DEFAULT_FOCAL_ZOOM = 1
 
-/** Portrait call viewport aspect (width / height). */
+/** Portrait phone call viewport aspect (width / height). */
 export const PORTRAIT_CALL_ASPECT = 9 / 16
+
+/** Landscape phone / desktop call viewport aspect (width / height). */
+export const LANDSCAPE_CALL_ASPECT = 16 / 9
 
 export const MIN_FOCAL_ZOOM = 1
 export const MAX_FOCAL_ZOOM = 4
@@ -16,13 +19,15 @@ export const MIN_CROP_DIMENSION = 0.08
 /** Normalized step for arrow nudge controls in the focal editor. */
 export const FOCAL_NUDGE_STEP = 0.025
 
+export type DisplayOrientation = 'portrait' | 'landscape'
+
 export interface FocalPoint {
   focalX: number
   focalY: number
 }
 
 export interface FocalFrame extends FocalPoint {
-  /** 1 = default portrait cover; >1 zooms out toward landscape letterbox (legacy / derived). */
+  /** 1 = default cover; >1 zooms out toward full image (legacy / derived). */
   focalZoom: number
   /** Normalized crop width as a fraction of image width (optional; overrides zoom-derived size). */
   cropWidth?: number
@@ -30,8 +35,17 @@ export interface FocalFrame extends FocalPoint {
   cropHeight?: number
 }
 
-export interface PhotoSource extends FocalFrame {
+export interface DualFraming {
+  portrait: FocalFrame
+  landscape: FocalFrame
+}
+
+export interface PhotoSource {
   url: string
+  portraitFraming: FocalFrame
+  landscapeFraming: FocalFrame
+  /** True when landscape framing was explicitly saved (not a runtime default). */
+  landscapeStored?: boolean
 }
 
 export interface ImageBounds {
@@ -57,6 +71,26 @@ export type CropResizeHandle =
   | 's'
   | 'sw'
   | 'w'
+
+export function viewportAspectForOrientation(
+  orientation: DisplayOrientation,
+): number {
+  return orientation === 'landscape'
+    ? LANDSCAPE_CALL_ASPECT
+    : PORTRAIT_CALL_ASPECT
+}
+
+export function orientationFromViewport(
+  width: number,
+  height: number,
+): DisplayOrientation {
+  return height >= width ? 'portrait' : 'landscape'
+}
+
+export function getDisplayOrientation(): DisplayOrientation {
+  if (typeof window === 'undefined') return 'portrait'
+  return orientationFromViewport(window.innerWidth, window.innerHeight)
+}
 
 export function normalizeFocal(value: unknown, fallback = 0.5): number {
   const num = typeof value === 'number' ? value : Number(value)
@@ -115,35 +149,101 @@ export function focalFrameFromValues(
   }
 }
 
-export function photoSourceFromUrl(
-  url: string,
-  focalX?: unknown,
-  focalY?: unknown,
-  focalZoom?: unknown,
-  cropWidth?: unknown,
-  cropHeight?: unknown,
-): PhotoSource {
-  const focal = focalFrameFromValues(
-    focalX,
-    focalY,
-    focalZoom,
-    cropWidth,
-    cropHeight,
+export function resolveFramingForOrientation(
+  source: PhotoSource,
+  orientation: DisplayOrientation,
+  imageAspect: number,
+  preferWideFrame = false,
+): FocalFrame {
+  if (orientation === 'portrait') {
+    return source.portraitFraming
+  }
+  if (source.landscapeStored) {
+    return source.landscapeFraming
+  }
+  return defaultDualFramingForImage(imageAspect, preferWideFrame).landscape
+}
+
+export function focalForOrientation(
+  source: PhotoSource,
+  orientation: DisplayOrientation,
+  imageAspect = 1,
+  preferWideFrame = false,
+): FocalFrame {
+  return resolveFramingForOrientation(
+    source,
+    orientation,
+    imageAspect,
+    preferWideFrame,
   )
-  return { url, ...focal }
+}
+
+export function photoSourceFromFraming(
+  url: string,
+  framing: DualFraming,
+  landscapeStored = true,
+): PhotoSource {
+  return {
+    url,
+    portraitFraming: framing.portrait,
+    landscapeFraming: framing.landscape,
+    landscapeStored,
+  }
+}
+
+export function photoSourceFromUrl(url: string): PhotoSource {
+  const portrait = focalFrameFromValues()
+  const landscape = focalFrameFromValues()
+  return photoSourceFromFraming(url, { portrait, landscape }, false)
 }
 
 export function photoSourcesFromUrls(urls: string[]): PhotoSource[] {
   return urls.map((url) => photoSourceFromUrl(url))
 }
 
-/** Normalized width/height of the minimum portrait cover crop at zoom = 1. */
-export function coverCropSize(imageAspect: number): { width: number; height: number } {
-  const aspect = imageAspect > 0 ? imageAspect : 1
-  if (aspect >= PORTRAIT_CALL_ASPECT) {
-    return { width: PORTRAIT_CALL_ASPECT / aspect, height: 1 }
+export function defaultDualFramingForImage(
+  imageAspect: number,
+  preferWideFrame = false,
+): DualFraming {
+  return {
+    portrait: defaultFocalFrameForImage(
+      imageAspect,
+      PORTRAIT_CALL_ASPECT,
+      preferWideFrame,
+    ),
+    landscape: defaultFocalFrameForImage(
+      imageAspect,
+      LANDSCAPE_CALL_ASPECT,
+      preferWideFrame,
+    ),
   }
-  return { width: 1, height: aspect / PORTRAIT_CALL_ASPECT }
+}
+
+export function dualFramingFromPortraitLegacy(
+  portrait: FocalFrame,
+  imageAspect: number,
+  preferWideFrame = false,
+): DualFraming {
+  return {
+    portrait,
+    landscape: defaultFocalFrameForImage(
+      imageAspect,
+      LANDSCAPE_CALL_ASPECT,
+      preferWideFrame,
+    ),
+  }
+}
+
+/** Normalized width/height of the minimum cover crop for a viewport aspect at zoom = 1. */
+export function coverCropSize(
+  imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
+): { width: number; height: number } {
+  const aspect = imageAspect > 0 ? imageAspect : 1
+  if (aspect >= viewportAspect) {
+    return { width: viewportAspect / aspect, height: 1 }
+  }
+  return { width: 1, height: aspect / viewportAspect }
 }
 
 export function maxFocalZoom(_imageAspect: number): number {
@@ -154,26 +254,24 @@ export function isLandscapeImage(imageAspect: number): boolean {
   return imageAspect > 1.05
 }
 
-/** Progress from portrait cover (0) to full-image framing (1) for a zoom value. */
-export function focalZoomProgress(focalZoom: number, imageAspect: number): number {
-  const maxZoom = maxFocalZoom(imageAspect)
+export function focalZoomProgress(focalZoom: number, _imageAspect: number): number {
+  const maxZoom = maxFocalZoom(_imageAspect)
   if (maxZoom <= MIN_FOCAL_ZOOM) return 0
   const zoom = normalizeFocalZoom(focalZoom)
   return Math.min(1, Math.max(0, (zoom - MIN_FOCAL_ZOOM) / (maxZoom - MIN_FOCAL_ZOOM)))
 }
 
-/**
- * Visible aspect (width/height) of the framed crop on the portrait call screen.
- * At zoom = 1 this is PORTRAIT_CALL_ASPECT; at max zoom it reaches the image aspect.
- */
-export function visibleAspectAtZoom(focalZoom: number, imageAspect: number): number {
+export function visibleAspectAtZoom(
+  focalZoom: number,
+  imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
+): number {
   const aspect = imageAspect > 0 ? imageAspect : 1
   const t = focalZoomProgress(focalZoom, aspect)
-  const ratio = aspect / PORTRAIT_CALL_ASPECT
-  return PORTRAIT_CALL_ASPECT * Math.pow(ratio, t)
+  const ratio = aspect / viewportAspect
+  return viewportAspect * Math.pow(ratio, t)
 }
 
-/** Largest normalized crop (fractions of image w/h) with the given visible aspect. */
 export function maxFrameForVisibleAspect(
   visibleAspect: number,
   imageAspect: number,
@@ -189,12 +287,13 @@ export function maxFrameForVisibleAspect(
 export function frameSizeFromZoom(
   focalZoom: number,
   imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
 ): { width: number; height: number } {
   const aspect = imageAspect > 0 ? imageAspect : 1
-  const base = coverCropSize(aspect)
+  const base = coverCropSize(aspect, viewportAspect)
   const t = focalZoomProgress(focalZoom, aspect)
   const target = maxFrameForVisibleAspect(
-    visibleAspectAtZoom(focalZoom, aspect),
+    visibleAspectAtZoom(focalZoom, aspect, viewportAspect),
     aspect,
   )
   return {
@@ -206,6 +305,7 @@ export function frameSizeFromZoom(
 export function frameSizeFromFocal(
   focal: FocalFrame,
   imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
 ): { width: number; height: number } {
   if (hasExplicitCropSize(focal)) {
     return {
@@ -213,22 +313,24 @@ export function frameSizeFromFocal(
       height: normalizeCropDimension(focal.cropHeight),
     }
   }
-  return frameSizeFromZoom(focal.focalZoom, imageAspect)
+  return frameSizeFromZoom(focal.focalZoom, imageAspect, viewportAspect)
 }
 
 export function focalZoomFromCropSize(
   cropWidth: number,
   cropHeight: number,
   imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
 ): number {
   const aspect = imageAspect > 0 ? imageAspect : 1
   const width = normalizeCropDimension(cropWidth)
   const height = normalizeCropDimension(cropHeight)
-  const displayAspect = height > 0 ? (width / height) * aspect : PORTRAIT_CALL_ASPECT
-  const ratio = displayAspect / PORTRAIT_CALL_ASPECT
+  const displayAspect =
+    height > 0 ? (width / height) * aspect : viewportAspect
+  const ratio = displayAspect / viewportAspect
   if (ratio <= 1) return MIN_FOCAL_ZOOM
 
-  const maxRatio = aspect / PORTRAIT_CALL_ASPECT
+  const maxRatio = aspect / viewportAspect
   if (maxRatio <= 1) return MIN_FOCAL_ZOOM
 
   const t = Math.log(ratio) / Math.log(maxRatio)
@@ -239,38 +341,46 @@ export function focalZoomFromCropSize(
 
 export function defaultFocalFrameForImage(
   imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
   preferWideFrame = false,
 ): FocalFrame {
   if (!preferWideFrame || !isLandscapeImage(imageAspect)) {
-    const cover = coverCropSize(imageAspect)
+    const cover = coverCropSize(imageAspect, viewportAspect)
     return focalFrameFromCenter(
       DEFAULT_FOCAL_X,
       DEFAULT_FOCAL_Y,
       cover.width,
       cover.height,
       imageAspect,
+      viewportAspect,
     )
   }
 
   const maxZoom = maxFocalZoom(imageAspect)
   const suggestedZoom = Math.min(maxZoom, 1.5)
-  const size = frameSizeFromZoom(Math.max(DEFAULT_FOCAL_ZOOM, suggestedZoom), imageAspect)
+  const size = frameSizeFromZoom(
+    Math.max(DEFAULT_FOCAL_ZOOM, suggestedZoom),
+    imageAspect,
+    viewportAspect,
+  )
   return focalFrameFromCenter(
     DEFAULT_FOCAL_X,
     DEFAULT_FOCAL_Y,
     size.width,
     size.height,
     imageAspect,
+    viewportAspect,
   )
 }
 
 export function displayAspectFromFocal(
   focal: FocalFrame,
   imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
 ): number {
-  const frame = frameSizeFromFocal(focal, imageAspect)
+  const frame = frameSizeFromFocal(focal, imageAspect, viewportAspect)
   const aspect = imageAspect > 0 ? imageAspect : 1
-  if (frame.height <= 0) return PORTRAIT_CALL_ASPECT
+  if (frame.height <= 0) return viewportAspect
   return (frame.width / frame.height) * aspect
 }
 
@@ -316,6 +426,7 @@ export function focalFrameFromCenter(
   cropWidth: number,
   cropHeight: number,
   imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
 ): FocalFrame {
   const width = normalizeCropDimension(cropWidth)
   const height = normalizeCropDimension(cropHeight)
@@ -324,7 +435,12 @@ export function focalFrameFromCenter(
     ...center,
     cropWidth: width,
     cropHeight: height,
-    focalZoom: focalZoomFromCropSize(width, height, imageAspect),
+    focalZoom: focalZoomFromCropSize(
+      width,
+      height,
+      imageAspect,
+      viewportAspect,
+    ),
   }
 }
 
@@ -333,15 +449,17 @@ export function nudgeFocalCenter(
   deltaX: number,
   deltaY: number,
   imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
   step = FOCAL_NUDGE_STEP,
 ): FocalFrame {
-  const size = frameSizeFromFocal(focal, imageAspect)
+  const size = frameSizeFromFocal(focal, imageAspect, viewportAspect)
   return focalFrameFromCenter(
     focal.focalX + deltaX * step,
     focal.focalY + deltaY * step,
     size.width,
     size.height,
     imageAspect,
+    viewportAspect,
   )
 }
 
@@ -350,17 +468,19 @@ export function focalFrameFromCenterAndZoom(
   focalY: number,
   focalZoom: number,
   imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
 ): FocalFrame {
   const zoom = normalizeFocalZoom(focalZoom)
   const maxZoom = maxFocalZoom(imageAspect)
   const clampedZoom = Math.min(maxZoom, zoom)
-  const frame = frameSizeFromZoom(clampedZoom, imageAspect)
+  const frame = frameSizeFromZoom(clampedZoom, imageAspect, viewportAspect)
   return focalFrameFromCenter(
     focalX,
     focalY,
     frame.width,
     frame.height,
     imageAspect,
+    viewportAspect,
   )
 }
 
@@ -413,6 +533,7 @@ export function resizeCropRect(
 export function focalFrameFromNormalizedRect(
   rect: FrameRect,
   imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
 ): FocalFrame {
   const clamped = clampCropRect(rect.left, rect.top, rect.width, rect.height)
   return focalFrameFromCenter(
@@ -421,14 +542,16 @@ export function focalFrameFromNormalizedRect(
     clamped.width,
     clamped.height,
     imageAspect,
+    viewportAspect,
   )
 }
 
 export function normalizedFrameRectFromFocal(
   focal: FocalFrame,
   imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
 ): FrameRect {
-  const frame = frameSizeFromFocal(focal, imageAspect)
+  const frame = frameSizeFromFocal(focal, imageAspect, viewportAspect)
   return {
     left: focal.focalX - frame.width / 2,
     top: focal.focalY - frame.height / 2,
@@ -441,8 +564,9 @@ export function frameRectFromFocal(
   focal: FocalFrame,
   bounds: ImageBounds,
   imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
 ): FrameRect {
-  const frame = normalizedFrameRectFromFocal(focal, imageAspect)
+  const frame = normalizedFrameRectFromFocal(focal, imageAspect, viewportAspect)
   return {
     left: bounds.left + frame.left * bounds.width,
     top: bounds.top + frame.top * bounds.height,
@@ -455,6 +579,7 @@ export function focalFrameFromFrameRect(
   rect: FrameRect,
   bounds: ImageBounds,
   imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
 ): FocalFrame {
   const normalized = {
     left: (rect.left - bounds.left) / bounds.width,
@@ -462,7 +587,7 @@ export function focalFrameFromFrameRect(
     width: rect.width / bounds.width,
     height: rect.height / bounds.height,
   }
-  return focalFrameFromNormalizedRect(normalized, imageAspect)
+  return focalFrameFromNormalizedRect(normalized, imageAspect, viewportAspect)
 }
 
 export function computeContainBounds(
@@ -511,24 +636,80 @@ export function transformOriginStyle(focal: FocalPoint): string {
   return `${focal.focalX * 100}% ${focal.focalY * 100}%`
 }
 
-export function hasCustomFocalFrame(focal: FocalFrame): boolean {
+export function hasCustomFocalFrame(
+  focal: FocalFrame,
+  imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
+  preferWideFrame = false,
+): boolean {
+  const defaults = defaultFocalFrameForImage(
+    imageAspect,
+    viewportAspect,
+    preferWideFrame,
+  )
   return (
-    focal.focalX !== DEFAULT_FOCAL_X ||
-    focal.focalY !== DEFAULT_FOCAL_Y ||
-    focal.focalZoom !== DEFAULT_FOCAL_ZOOM ||
-    hasExplicitCropSize(focal)
+    focal.focalX !== defaults.focalX ||
+    focal.focalY !== defaults.focalY ||
+    focal.focalZoom !== defaults.focalZoom ||
+    (focal.cropWidth != null && focal.cropWidth !== defaults.cropWidth) ||
+    (focal.cropHeight != null && focal.cropHeight !== defaults.cropHeight)
   )
 }
 
-/** Letterboxed viewport band on the portrait call screen. */
+export function hasCustomDualFraming(
+  framing: DualFraming,
+  imageAspect: number,
+  preferWideFrame = false,
+): boolean {
+  return (
+    hasCustomFocalFrame(
+      framing.portrait,
+      imageAspect,
+      PORTRAIT_CALL_ASPECT,
+      preferWideFrame,
+    ) ||
+    hasCustomFocalFrame(
+      framing.landscape,
+      imageAspect,
+      LANDSCAPE_CALL_ASPECT,
+      preferWideFrame,
+    )
+  )
+}
+
+export function hasStoredLandscapeFraming(
+  landscapeFocalX?: unknown,
+  landscapeFocalY?: unknown,
+  landscapeFocalZoom?: unknown,
+  landscapeCropWidth?: unknown,
+  landscapeCropHeight?: unknown,
+): boolean {
+  return (
+    (landscapeFocalX != null &&
+      normalizeFocal(landscapeFocalX) !== DEFAULT_FOCAL_X) ||
+    (landscapeFocalY != null &&
+      normalizeFocal(landscapeFocalY) !== DEFAULT_FOCAL_Y) ||
+    (landscapeFocalZoom != null &&
+      normalizeFocalZoom(landscapeFocalZoom) !== DEFAULT_FOCAL_ZOOM) ||
+    (landscapeCropWidth != null && Number.isFinite(Number(landscapeCropWidth))) ||
+    (landscapeCropHeight != null && Number.isFinite(Number(landscapeCropHeight)))
+  )
+}
+
+/** Letterboxed viewport band on the call screen for a given viewport aspect. */
 export function photoViewportBandStyle(
   focal: FocalFrame,
   imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
 ): CSSProperties {
-  const displayAspect = displayAspectFromFocal(focal, imageAspect)
+  const displayAspect = displayAspectFromFocal(
+    focal,
+    imageAspect,
+    viewportAspect,
+  )
   const bandHeightPct = Math.min(
     100,
-    (PORTRAIT_CALL_ASPECT / displayAspect) * 100,
+    (viewportAspect / displayAspect) * 100,
   )
   const bandTopPct = (100 - bandHeightPct) / 2
 
@@ -542,12 +723,12 @@ export function photoViewportBandStyle(
   }
 }
 
-/** Positions the image inside the viewport band to show the selected crop. */
 export function photoLayerCoverStyle(
   focal: FocalFrame,
   imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
 ): CSSProperties {
-  return photoViewportBandStyle(focal, imageAspect)
+  return photoViewportBandStyle(focal, imageAspect, viewportAspect)
 }
 
 export function photoLayerMediaStyle(

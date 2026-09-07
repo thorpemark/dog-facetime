@@ -891,6 +891,31 @@ button {
   margin-bottom: 12px;
 }
 
+.focal-orientation-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.focal-orientation-tab {
+  flex: 1;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.focal-orientation-tab--active {
+  background: rgba(52, 199, 89, 0.22);
+  border-color: rgba(52, 199, 89, 0.65);
+  color: #fff;
+}
+
 .focal-move-toggle {
   font-size: 0.82rem;
   font-weight: 600;
@@ -1138,6 +1163,11 @@ button {
   overflow: hidden;
   background: #000;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.focal-preview-frame--landscape {
+  width: 213px;
+  height: 120px;
 }
 
 .focal-preview-media {

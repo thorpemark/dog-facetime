@@ -7,6 +7,9 @@ import {
   DEFAULT_FOCAL_Y,
   DEFAULT_FOCAL_ZOOM,
   type PhotoSource,
+  focalFrameFromValues,
+  hasStoredLandscapeFraming,
+  photoSourceFromFraming,
   photoSourcesFromUrls,
 } from '../utils/focalPoint'
 import { MANUAL_NAV_PAUSE_MS } from '../utils/kenBurnsSpeed'
@@ -25,12 +28,21 @@ interface UseMediaPlaybackOptions {
 }
 
 function emptyPhotoSource(): PhotoSource {
-  return {
-    url: '',
+  const portrait = {
     focalX: DEFAULT_FOCAL_X,
     focalY: DEFAULT_FOCAL_Y,
     focalZoom: DEFAULT_FOCAL_ZOOM,
   }
+  const landscape = {
+    focalX: DEFAULT_FOCAL_X,
+    focalY: DEFAULT_FOCAL_Y,
+    focalZoom: DEFAULT_FOCAL_ZOOM,
+  }
+  return photoSourceFromFraming(
+    '',
+    { portrait, landscape },
+    false,
+  )
 }
 
 export function useMediaPlayback(
@@ -404,6 +416,11 @@ export function buildPhotoSources(
     focalZoom?: number
     cropWidth?: number
     cropHeight?: number
+    landscapeFocalX?: number
+    landscapeFocalY?: number
+    landscapeFocalZoom?: number
+    landscapeCropWidth?: number
+    landscapeCropHeight?: number
   }>,
 ): PhotoSource[] {
   if (!photoFocalPoints || photoFocalPoints.length === 0) {
@@ -411,14 +428,35 @@ export function buildPhotoSources(
   }
 
   return photoUrls.map((url, index) => {
-    const focal = photoFocalPoints[index]
-    return {
+    const points = photoFocalPoints[index]
+    const portrait = focalFrameFromValues(
+      points?.focalX,
+      points?.focalY,
+      points?.focalZoom,
+      points?.cropWidth,
+      points?.cropHeight,
+    )
+    const landscapeStored = hasStoredLandscapeFraming(
+      points?.landscapeFocalX,
+      points?.landscapeFocalY,
+      points?.landscapeFocalZoom,
+      points?.landscapeCropWidth,
+      points?.landscapeCropHeight,
+    )
+    const landscape = landscapeStored
+      ? focalFrameFromValues(
+          points?.landscapeFocalX,
+          points?.landscapeFocalY,
+          points?.landscapeFocalZoom,
+          points?.landscapeCropWidth,
+          points?.landscapeCropHeight,
+        )
+      : portrait
+
+    return photoSourceFromFraming(
       url,
-      focalX: focal?.focalX ?? DEFAULT_FOCAL_X,
-      focalY: focal?.focalY ?? DEFAULT_FOCAL_Y,
-      focalZoom: focal?.focalZoom ?? DEFAULT_FOCAL_ZOOM,
-      cropWidth: focal?.cropWidth,
-      cropHeight: focal?.cropHeight,
-    }
+      { portrait, landscape },
+      landscapeStored,
+    )
   })
 }

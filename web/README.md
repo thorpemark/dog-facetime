@@ -127,11 +127,12 @@ Uploaded photos are shown with a respectful “alive” presentation:
 
 **Portrait framing (focal frame):**
 
-- On create/edit, tap a photo to resize the crop with corner/edge handles (width and height), drag to pan, nudge with arrows, or tap to set focus
-- Stored per photo as normalized `focal_x` / `focal_y` (frame center), optional `focal_crop_w` / `focal_crop_h` (crop size), and legacy `focal_zoom` (derived when crop size is saved)
-- Tight portrait cover fills the call screen; wider or shorter crops letterbox on the portrait call view (WYSIWYG with the live preview)
-- Together / group photos default to a slightly wider frame on landscape images
-- Existing Supabase projects: run [`supabase/migration_focal_point.sql`](supabase/migration_focal_point.sql), [`supabase/migration_focal_zoom.sql`](supabase/migration_focal_zoom.sql), then [`supabase/migration_focal_crop.sql`](supabase/migration_focal_crop.sql) after the base migration
+- On create/edit, tap a photo to set **two saved crops**: phone portrait and landscape/PC
+- Resize with corner/edge handles (width and height), pan with Move frame, tap to focus, and nudge with arrows
+- Stored per photo as portrait `focal_x` / `focal_y` / optional `focal_crop_w` / `focal_crop_h` plus landscape `landscape_focal_*` columns (legacy `focal_zoom` kept as derived metadata)
+- During calls, the app picks the matching framing when the viewport is portrait vs landscape (phone rotation or desktop widescreen)
+- Together / group photos default to slightly wider framing on landscape images
+- Existing Supabase projects: run [`supabase/migration_focal_point.sql`](supabase/migration_focal_point.sql), [`supabase/migration_focal_zoom.sql`](supabase/migration_focal_zoom.sql), [`supabase/migration_focal_crop.sql`](supabase/migration_focal_crop.sql), then [`supabase/migration_focal_orientation.sql`](supabase/migration_focal_orientation.sql) after the base migration
 
 Without uploaded photos, placeholder MP4 clips from `public/clips/` are used.
 
