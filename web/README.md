@@ -127,8 +127,11 @@ Uploaded photos are shown with a respectful “alive” presentation:
 
 **Portrait framing (focal frame):**
 
-- On create/edit, tap a photo to drag a portrait crop frame over the image and zoom out to include more width for two-shots
-- Stored per photo as normalized `focal_x` / `focal_y` (frame center) and `focal_zoom` (1 = default cover; >1 zooms out); applied on the call screen via framed `object-fit: cover`
+- On create/edit, tap a photo to drag a crop frame over the image and zoom out to include more width for two-shots
+- Stored per photo as normalized `focal_x` / `focal_y` (frame center) and `focal_zoom` (1 = full-bleed portrait cover; >1 zooms out toward landscape letterbox)
+- At zoom ≈ 1 the call screen uses full-bleed portrait cover centered on the focal point; as zoom increases the visible crop widens and its aspect moves toward the photo’s native aspect, producing top/bottom letterboxing on the portrait call screen (like viewing a landscape photo on an iPhone)
+- Focal pan and zoom compose: drag repositions the crop while zoomed out; all three values persist
+- Together / group photos default to a slightly zoomed-out frame on landscape images
 - Existing Supabase projects: run [`supabase/migration_focal_point.sql`](supabase/migration_focal_point.sql) then [`supabase/migration_focal_zoom.sql`](supabase/migration_focal_zoom.sql) after the base migration
 
 Without uploaded photos, placeholder MP4 clips from `public/clips/` are used.

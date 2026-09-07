@@ -16,7 +16,7 @@ export interface FocalPoint {
 }
 
 export interface FocalFrame extends FocalPoint {
-  /** 1 = default cover crop; >1 zooms out to include more of the image. */
+  /** 1 = default portrait cover; >1 zooms out toward landscape letterbox. */
   focalZoom: number
 }
 
@@ -94,21 +94,44 @@ export function coverCropSize(imageAspect: number): { width: number; height: num
   return { width: 1, height: aspect / PORTRAIT_CALL_ASPECT }
 }
 
-export function maxFocalZoom(imageAspect: number): number {
-  const crop = coverCropSize(imageAspect)
-  let maxZoom = MAX_FOCAL_ZOOM
-  // Only constrain dimensions that are not already using the full image axis.
-  if (crop.width > 0 && crop.width < 1) {
-    maxZoom = Math.min(maxZoom, 1 / crop.width)
-  }
-  if (crop.height > 0 && crop.height < 1) {
-    maxZoom = Math.min(maxZoom, 1 / crop.height)
-  }
-  return maxZoom
+export function maxFocalZoom(_imageAspect: number): number {
+  return MAX_FOCAL_ZOOM
 }
 
 export function isLandscapeImage(imageAspect: number): boolean {
   return imageAspect > 1.05
+}
+
+/** Progress from portrait cover (0) to full-image framing (1) for a zoom value. */
+export function focalZoomProgress(focalZoom: number, imageAspect: number): number {
+  const maxZoom = maxFocalZoom(imageAspect)
+  if (maxZoom <= MIN_FOCAL_ZOOM) return 0
+  const zoom = normalizeFocalZoom(focalZoom)
+  return Math.min(1, Math.max(0, (zoom - MIN_FOCAL_ZOOM) / (maxZoom - MIN_FOCAL_ZOOM)))
+}
+
+/**
+ * Visible aspect (width/height) of the framed crop on the portrait call screen.
+ * At zoom = 1 this is PORTRAIT_CALL_ASPECT; at max zoom it reaches the image aspect.
+ */
+export function visibleAspectAtZoom(focalZoom: number, imageAspect: number): number {
+  const aspect = imageAspect > 0 ? imageAspect : 1
+  const t = focalZoomProgress(focalZoom, aspect)
+  const ratio = aspect / PORTRAIT_CALL_ASPECT
+  return PORTRAIT_CALL_ASPECT * Math.pow(ratio, t)
+}
+
+/** Largest normalized crop (fractions of image w/h) with the given visible aspect. */
+export function maxFrameForVisibleAspect(
+  visibleAspect: number,
+  imageAspect: number,
+): { width: number; height: number } {
+  const aspect = imageAspect > 0 ? imageAspect : 1
+  const frameAspect = visibleAspect / aspect
+  if (frameAspect >= 1) {
+    return { width: 1, height: 1 / frameAspect }
+  }
+  return { width: frameAspect, height: 1 }
 }
 
 export function defaultFocalFrameForImage(
@@ -124,7 +147,7 @@ export function defaultFocalFrameForImage(
   }
 
   const maxZoom = maxFocalZoom(imageAspect)
-  const suggestedZoom = Math.min(maxZoom, 1.35)
+  const suggestedZoom = Math.min(maxZoom, 1.5)
   return {
     focalX: DEFAULT_FOCAL_X,
     focalY: DEFAULT_FOCAL_Y,
@@ -136,12 +159,27 @@ export function frameSizeFromFocal(
   focal: FocalFrame,
   imageAspect: number,
 ): { width: number; height: number } {
-  const crop = coverCropSize(imageAspect)
-  const zoom = normalizeFocalZoom(focal.focalZoom)
+  const aspect = imageAspect > 0 ? imageAspect : 1
+  const base = coverCropSize(aspect)
+  const t = focalZoomProgress(focal.focalZoom, aspect)
+  const target = maxFrameForVisibleAspect(
+    visibleAspectAtZoom(focal.focalZoom, aspect),
+    aspect,
+  )
   return {
-    width: Math.min(1, crop.width * zoom),
-    height: Math.min(1, crop.height * zoom),
+    width: Math.min(1, base.width + t * (target.width - base.width)),
+    height: Math.min(1, base.height + t * (target.height - base.height)),
   }
+}
+
+export function displayAspectFromFocal(
+  focal: FocalFrame,
+  imageAspect: number,
+): number {
+  const frame = frameSizeFromFocal(focal, imageAspect)
+  const aspect = imageAspect > 0 ? imageAspect : 1
+  if (frame.height <= 0) return PORTRAIT_CALL_ASPECT
+  return (frame.width / frame.height) * aspect
 }
 
 export function clampFocalCenter(
@@ -198,10 +236,18 @@ export function focalFrameFromFrameRect(
   imageAspect: number,
 ): FocalFrame {
   const frameWidth = rect.width / bounds.width
-  const crop = coverCropSize(imageAspect)
-  const zoom = normalizeFocalZoom(frameWidth / crop.width)
+  const frameHeight = rect.height / bounds.height
   const centerX = (rect.left - bounds.left + rect.width / 2) / bounds.width
   const centerY = (rect.top - bounds.top + rect.height / 2) / bounds.height
+  const displayAspect =
+    frameHeight > 0 ? (frameWidth / frameHeight) * imageAspect : PORTRAIT_CALL_ASPECT
+  const ratio = displayAspect / PORTRAIT_CALL_ASPECT
+  const zoom =
+    ratio <= 1
+      ? MIN_FOCAL_ZOOM
+      : MIN_FOCAL_ZOOM +
+        (Math.log(ratio) / Math.log(imageAspect / PORTRAIT_CALL_ASPECT)) *
+          (maxFocalZoom(imageAspect) - MIN_FOCAL_ZOOM)
   return focalFrameFromCenterAndZoom(centerX, centerY, zoom, imageAspect)
 }
 
@@ -259,24 +305,51 @@ export function hasCustomFocalFrame(focal: FocalFrame): boolean {
   )
 }
 
-/** Positions a cover-sized image box for framed portrait playback. */
-export function photoLayerCoverStyle(focal: FocalFrame): CSSProperties {
-  const zoom = normalizeFocalZoom(focal.focalZoom)
+/** Letterboxed viewport band on the portrait call screen. */
+export function photoViewportBandStyle(
+  focal: FocalFrame,
+  imageAspect: number,
+): CSSProperties {
+  const displayAspect = displayAspectFromFocal(focal, imageAspect)
+  const bandHeightPct = Math.min(
+    100,
+    (PORTRAIT_CALL_ASPECT / displayAspect) * 100,
+  )
+  const bandTopPct = (100 - bandHeightPct) / 2
+
   return {
     position: 'absolute',
-    width: `${zoom * 100}%`,
-    height: `${zoom * 100}%`,
-    left: `${(0.5 - focal.focalX * zoom) * 100}%`,
-    top: `${(0.5 - focal.focalY * zoom) * 100}%`,
+    left: 0,
+    width: '100%',
+    top: `${bandTopPct}%`,
+    height: `${bandHeightPct}%`,
+    overflow: 'hidden',
   }
 }
 
-export function photoLayerMediaStyle(focal: FocalFrame): CSSProperties {
+/** Positions the image inside the viewport band to show the selected crop. */
+export function photoLayerCoverStyle(
+  focal: FocalFrame,
+  imageAspect: number,
+): CSSProperties {
+  return photoViewportBandStyle(focal, imageAspect)
+}
+
+export function photoLayerMediaStyle(
+  focal: FocalFrame,
+  imageAspect: number,
+): CSSProperties {
+  const frame = frameSizeFromFocal(focal, imageAspect)
+  const invW = 1 / frame.width
+  const invH = 1 / frame.height
+
   return {
-    width: '100%',
-    height: '100%',
+    position: 'absolute',
+    width: `${invW * 100}%`,
+    height: `${invH * 100}%`,
+    left: `${-(focal.focalX - frame.width / 2) * invW * 100}%`,
+    top: `${-(focal.focalY - frame.height / 2) * invH * 100}%`,
     objectFit: 'cover',
-    objectPosition: objectPositionStyle(focal),
     transformOrigin: transformOriginStyle(focal),
     '--focal-x': `${focal.focalX * 100}%`,
     '--focal-y': `${focal.focalY * 100}%`,

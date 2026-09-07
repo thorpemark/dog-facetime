@@ -195,8 +195,8 @@ export function PhotoFocalEditor({
 
         <p className="focal-editor-lead">
           {showWideHint
-            ? 'Drag the portrait frame to include everyone. Use zoom to pull back for two-shots.'
-            : 'Drag the portrait frame to choose what fills the call screen.'}
+            ? 'Drag the frame to pan. Zoom out to widen the crop and letterbox for two-shots.'
+            : 'Drag the portrait frame to choose what fills the call screen. Zoom out to reveal more.'}
         </p>
 
         <div className="focal-editor-layout">
@@ -230,7 +230,11 @@ export function PhotoFocalEditor({
 
           <div className="focal-preview-panel">
             <p className="focal-preview-label">Call preview</p>
-            <FocalCallPreview imageUrl={imageUrl} focal={focal} />
+            <FocalCallPreview
+              imageUrl={imageUrl}
+              focal={focal}
+              imageAspect={imageAspect}
+            />
           </div>
         </div>
 
