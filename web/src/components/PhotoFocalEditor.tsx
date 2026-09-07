@@ -234,7 +234,10 @@ export function PhotoFocalEditor({
           </div>
         </div>
 
-        <label className="focal-zoom-control">
+        <label
+          className="focal-zoom-control"
+          onPointerDown={(event) => event.stopPropagation()}
+        >
           <span>Zoom out</span>
           <input
             type="range"
@@ -243,6 +246,9 @@ export function PhotoFocalEditor({
             step={0.01}
             value={focal.focalZoom}
             onChange={(event) => handleZoomChange(Number(event.target.value))}
+            onInput={(event) =>
+              handleZoomChange(Number((event.target as HTMLInputElement).value))
+            }
             aria-label="Zoom out to include more of the photo"
           />
           <span className="focal-zoom-value">{focal.focalZoom.toFixed(2)}×</span>
