@@ -125,11 +125,11 @@ Uploaded photos are shown with a respectful “alive” presentation:
 - **Manual navigation** — Swipe left/right on the photo area (touch or mouse drag), or tap the photo to reveal prev/next chevrons; auto-advance pauses ~10s after a manual change, then resumes
 - **During reactions** — Manual navigation is disabled while a keyword reaction is playing; the slideshow returns to the pre-reaction photo when the reaction ends
 
-**Portrait framing (focal point):**
+**Portrait framing (focal frame):**
 
-- On create/edit, tap a photo to set a focus point with a live portrait preview
-- Stored per photo as normalized `focal_x` / `focal_y` (default center); applied on the call screen via `object-position` / Ken Burns transform origin (full-bleed `object-fit: cover` on the call stage)
-- Existing Supabase projects: run [`supabase/migration_focal_point.sql`](supabase/migration_focal_point.sql) after the base migration
+- On create/edit, tap a photo to drag a portrait crop frame over the image and zoom out to include more width for two-shots
+- Stored per photo as normalized `focal_x` / `focal_y` (frame center) and `focal_zoom` (1 = default cover; >1 zooms out); applied on the call screen via framed `object-fit: cover`
+- Existing Supabase projects: run [`supabase/migration_focal_point.sql`](supabase/migration_focal_point.sql) then [`supabase/migration_focal_zoom.sql`](supabase/migration_focal_zoom.sql) after the base migration
 
 Without uploaded photos, placeholder MP4 clips from `public/clips/` are used.
 

@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react'
 import { useMemorialCall } from '../context/MemorialCallContext'
 import {
-  objectPositionStyle,
-  transformOriginStyle,
+  photoLayerCoverStyle,
+  photoLayerMediaStyle,
 } from '../utils/focalPoint'
 
 function photoLayerWrapperStyle(
@@ -10,19 +10,6 @@ function photoLayerWrapperStyle(
   transition: string,
 ): CSSProperties {
   return { opacity, transition }
-}
-
-function photoLayerMediaStyle(
-  focalX: number,
-  focalY: number,
-): CSSProperties {
-  const focal = { focalX, focalY }
-  return {
-    objectPosition: objectPositionStyle(focal),
-    transformOrigin: transformOriginStyle(focal),
-    '--focal-x': `${focalX * 100}%`,
-    '--focal-y': `${focalY * 100}%`,
-  } as CSSProperties
 }
 
 export function DualMediaView() {
@@ -56,16 +43,18 @@ export function DualMediaView() {
           className="photo-layer"
           style={photoLayerWrapperStyle(primaryOpacity, transition)}
         >
-          <img
-            className={`photo-layer-media motion-${primaryMotion}`}
-            src={primaryPhoto.url}
-            alt=""
-            draggable={false}
-            style={photoLayerMediaStyle(
-              primaryPhoto.focalX,
-              primaryPhoto.focalY,
-            )}
-          />
+          <div
+            className="photo-layer-cover"
+            style={photoLayerCoverStyle(primaryPhoto)}
+          >
+            <img
+              className={`photo-layer-media motion-${primaryMotion}`}
+              src={primaryPhoto.url}
+              alt=""
+              draggable={false}
+              style={photoLayerMediaStyle(primaryPhoto)}
+            />
+          </div>
         </div>
         {secondaryPhoto?.url && (
           <div
@@ -73,16 +62,18 @@ export function DualMediaView() {
             className="photo-layer"
             style={photoLayerWrapperStyle(secondaryOpacity, transition)}
           >
-            <img
-              className={`photo-layer-media motion-${secondaryMotion}`}
-              src={secondaryPhoto.url}
-              alt=""
-              draggable={false}
-              style={photoLayerMediaStyle(
-                secondaryPhoto.focalX,
-                secondaryPhoto.focalY,
-              )}
-            />
+            <div
+              className="photo-layer-cover"
+              style={photoLayerCoverStyle(secondaryPhoto)}
+            >
+              <img
+                className={`photo-layer-media motion-${secondaryMotion}`}
+                src={secondaryPhoto.url}
+                alt=""
+                draggable={false}
+                style={photoLayerMediaStyle(secondaryPhoto)}
+              />
+            </div>
           </div>
         )}
       </div>

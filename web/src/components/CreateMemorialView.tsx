@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { CallTargetKind, Memorial } from '../types/memorial'
-import type { FocalPoint } from '../utils/focalPoint'
+import type { FocalFrame } from '../utils/focalPoint'
 import { useAuth } from '../context/AuthContext'
 import { addPendingClaim } from '../lib/pendingMemorials'
 import {
@@ -26,6 +26,7 @@ interface DraftPhoto {
   previewUrl?: string
   focalX?: number
   focalY?: number
+  focalZoom?: number
 }
 
 interface TargetDraft {
@@ -48,6 +49,7 @@ function confirmUploadedPhoto(
     storagePath?: string
     focalX?: number
     focalY?: number
+    focalZoom?: number
   },
 ): TargetDraft {
   const pending = prev.photos.find((p) => p.id === tempId)
@@ -59,6 +61,7 @@ function confirmUploadedPhoto(
     storagePath: asset.storagePath,
     focalX: asset.focalX,
     focalY: asset.focalY,
+    focalZoom: asset.focalZoom,
   }
 
   const withoutTemp = prev.photos.filter((p) => p.id !== tempId)
@@ -229,7 +232,7 @@ export function CreateMemorialView() {
 
   const handleFocalChange = async (
     mediaId: string,
-    focal: FocalPoint,
+    focal: FocalFrame,
     setDraft: React.Dispatch<React.SetStateAction<TargetDraft>>,
   ) => {
     setLoading(true)
@@ -248,6 +251,7 @@ export function CreateMemorialView() {
                 ...photo,
                 focalX: updated.focalX,
                 focalY: updated.focalY,
+                focalZoom: updated.focalZoom,
               }
             : photo,
         ),
@@ -429,6 +433,7 @@ export function CreateMemorialView() {
                 sortOrder: 0,
                 focalX: p.focalX ?? 0.5,
                 focalY: p.focalY ?? 0.5,
+                focalZoom: p.focalZoom ?? 1,
               }))}
               onUpload={(files) =>
                 handleUpload('dog_a', dogA.displayName.trim() || 'Dog', 0, files, setDogA)
@@ -485,6 +490,7 @@ export function CreateMemorialView() {
                 sortOrder: 0,
                 focalX: p.focalX ?? 0.5,
                 focalY: p.focalY ?? 0.5,
+                focalZoom: p.focalZoom ?? 1,
               }))}
               onUpload={(files) =>
                 handleUpload('dog_b', dogB.displayName.trim() || 'Dog 2', 1, files, setDogB)
@@ -531,6 +537,7 @@ export function CreateMemorialView() {
                 sortOrder: 0,
                 focalX: p.focalX ?? 0.5,
                 focalY: p.focalY ?? 0.5,
+                focalZoom: p.focalZoom ?? 1,
               }))}
               onUpload={(files) =>
                 handleUpload(
@@ -545,6 +552,7 @@ export function CreateMemorialView() {
               onFocalChange={(mediaId, focal) =>
                 handleFocalChange(mediaId, focal, setTogether)
               }
+              preferWideFrame
               disabled={loading}
             />
             <button
