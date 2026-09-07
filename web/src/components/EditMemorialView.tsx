@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { CallTarget, Memorial } from '../types/memorial'
+import type { FocalPoint } from '../utils/focalPoint'
 import {
   deleteCallTarget,
   deletePhoto,
   getMemorialByEditToken,
   regenerateShareId,
+  updateMediaFocalPoint,
   updateMemorial,
   uploadPhoto,
   upsertCallTarget,
@@ -117,6 +119,34 @@ export function EditMemorialView() {
       })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Delete failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleFocalChange = async (mediaId: string, focal: FocalPoint) => {
+    if (!editToken || !memorial) return
+    setSaving(true)
+    setError(null)
+    try {
+      const updated = await updateMediaFocalPoint(editToken, mediaId, focal)
+      setMemorial({
+        ...memorial,
+        targets: memorial.targets.map((target) => ({
+          ...target,
+          media: target.media.map((photo) =>
+            photo.id === mediaId
+              ? {
+                  ...photo,
+                  focalX: updated.focalX,
+                  focalY: updated.focalY,
+                }
+              : photo,
+          ),
+        })),
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save focus')
     } finally {
       setSaving(false)
     }
@@ -270,6 +300,7 @@ export function EditMemorialView() {
                 const photo = target.media.find((m) => m.id === mediaId)
                 void handleDeletePhoto(mediaId, photo?.storagePath)
               }}
+              onFocalChange={(mediaId, focal) => void handleFocalChange(mediaId, focal)}
               disabled={saving}
             />
           </div>

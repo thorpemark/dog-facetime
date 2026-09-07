@@ -2,6 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { KeywordRulesConfig } from '../types'
 import type { MotionPreset } from '../types/memorial'
 import { clipUrl } from '../utils/keywordRules'
+import {
+  DEFAULT_FOCAL_X,
+  DEFAULT_FOCAL_Y,
+  type PhotoSource,
+  photoSourcesFromUrls,
+} from '../utils/focalPoint'
 import { MANUAL_NAV_PAUSE_MS } from '../utils/kenBurnsSpeed'
 import {
   REACTION_CROSSFADE_MS,
@@ -17,8 +23,16 @@ interface UseMediaPlaybackOptions {
   idleAnimationMs: number
 }
 
+function emptyPhotoSource(): PhotoSource {
+  return {
+    url: '',
+    focalX: DEFAULT_FOCAL_X,
+    focalY: DEFAULT_FOCAL_Y,
+  }
+}
+
 export function useMediaPlayback(
-  photoUrls: string[],
+  photos: PhotoSource[],
   rulesConfig: KeywordRulesConfig | null,
   options: UseMediaPlaybackOptions = {
     crossfadeIntervalMs: 5_000,
@@ -26,7 +40,7 @@ export function useMediaPlayback(
   },
 ) {
   const { crossfadeIntervalMs, idleAnimationMs } = options
-  const usePhotos = photoUrls.length > 0
+  const usePhotos = photos.length > 0
 
   const primaryRef = useRef<HTMLVideoElement>(null)
   const secondaryRef = useRef<HTMLVideoElement>(null)
@@ -38,10 +52,10 @@ export function useMediaPlayback(
   const [activePhotoSlot, setActivePhotoSlot] = useState<'primary' | 'secondary'>(
     'primary',
   )
-  const [primaryPhotoUrl, setPrimaryPhotoUrl] = useState<string | null>(
-    photoUrls[0] ?? null,
+  const [primaryPhoto, setPrimaryPhoto] = useState<PhotoSource>(
+    photos[0] ?? emptyPhotoSource(),
   )
-  const [secondaryPhotoUrl, setSecondaryPhotoUrl] = useState<string | null>(null)
+  const [secondaryPhoto, setSecondaryPhoto] = useState<PhotoSource | null>(null)
   const [primaryMotion, setPrimaryMotion] = useState<MotionPreset>('idle')
   const [secondaryMotion, setSecondaryMotion] = useState<MotionPreset>('idle')
   const [primaryMotionKey, setPrimaryMotionKey] = useState(0)
@@ -55,11 +69,11 @@ export function useMediaPlayback(
   const onCompleteRef = useRef<(() => void) | null>(null)
   const idleTimerRef = useRef<number | null>(null)
   const reactionTimerRef = useRef<number | null>(null)
-  const photoUrlsRef = useRef(photoUrls)
+  const photosRef = useRef(photos)
   const crossfadeIntervalRef = useRef(crossfadeIntervalMs)
   const prevCrossfadeIntervalRef = useRef(crossfadeIntervalMs)
 
-  photoUrlsRef.current = photoUrls
+  photosRef.current = photos
   crossfadeIntervalRef.current = crossfadeIntervalMs
   photoIndexRef.current = photoIndex
   activePhotoSlotRef.current = activePhotoSlot
@@ -108,21 +122,22 @@ export function useMediaPlayback(
       motion: MotionPreset = 'idle',
       options?: { restartMotion?: boolean },
     ) => {
-      const urls = photoUrlsRef.current
-      if (urls.length === 0) return
+      const items = photosRef.current
+      if (items.length === 0) return
 
       const normalized =
-        ((nextIndex % urls.length) + urls.length) % urls.length
+        ((nextIndex % items.length) + items.length) % items.length
       const incoming =
         activePhotoSlotRef.current === 'primary' ? 'secondary' : 'primary'
+      const nextPhoto = items[normalized]
 
       if (incoming === 'secondary') {
-        setSecondaryPhotoUrl(urls[normalized])
+        setSecondaryPhoto(nextPhoto)
         setSecondaryMotion(motion)
         if (options?.restartMotion) bumpMotionKey('secondary')
         crossfadePhotosTo('secondary')
       } else {
-        setPrimaryPhotoUrl(urls[normalized])
+        setPrimaryPhoto(nextPhoto)
         setPrimaryMotion(motion)
         if (options?.restartMotion) bumpMotionKey('primary')
         crossfadePhotosTo('primary')
@@ -136,13 +151,13 @@ export function useMediaPlayback(
 
   const scheduleIdleCycle = useCallback(
     (delayMs = crossfadeIntervalRef.current) => {
-      const urls = photoUrlsRef.current
-      if (!usePhotos || urls.length <= 1 || isPlayingReactionRef.current) return
+      const items = photosRef.current
+      if (!usePhotos || items.length <= 1 || isPlayingReactionRef.current) return
       if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current)
 
       idleTimerRef.current = window.setTimeout(() => {
         if (isPlayingReactionRef.current) return
-        const nextIndex = (photoIndexRef.current + 1) % urls.length
+        const nextIndex = (photoIndexRef.current + 1) % items.length
         showPhotoAtIndex(nextIndex, 'idle', { restartMotion: true })
         scheduleIdleCycleRef.current()
       }, delayMs)
@@ -155,12 +170,12 @@ export function useMediaPlayback(
 
   const goToPhoto = useCallback(
     (nextIndex: number) => {
-      if (!usePhotos || photoUrlsRef.current.length === 0) return
+      if (!usePhotos || photosRef.current.length === 0) return
       if (isPlayingReactionRef.current) return
 
       clearTimers()
       showPhotoAtIndex(nextIndex, 'idle', { restartMotion: true })
-      if (photoUrlsRef.current.length > 1) {
+      if (photosRef.current.length > 1) {
         scheduleIdleCycle(MANUAL_NAV_PAUSE_MS)
       }
     },
@@ -185,8 +200,8 @@ export function useMediaPlayback(
       photoIndexRef.current = 0
       activePhotoSlotRef.current = 'primary'
       setPhotoIndex(0)
-      setPrimaryPhotoUrl(photoUrls[0] ?? null)
-      setSecondaryPhotoUrl(null)
+      setPrimaryPhoto(photos[0] ?? emptyPhotoSource())
+      setSecondaryPhoto(null)
       setPrimaryMotion('idle')
       setSecondaryMotion('idle')
       setPrimaryMotionKey(0)
@@ -214,11 +229,11 @@ export function useMediaPlayback(
       secondary.pause()
       secondary.removeAttribute('src')
     }
-  }, [clearTimers, photoUrls, rulesConfig, scheduleIdleCycle, usePhotos])
+  }, [clearTimers, photos, rulesConfig, scheduleIdleCycle, usePhotos])
 
   const playPhotoReaction = useCallback(
     (clipId: string, onComplete: () => void) => {
-      if (isPlayingReactionRef.current || photoUrlsRef.current.length === 0) return
+      if (isPlayingReactionRef.current || photosRef.current.length === 0) return
 
       clearTimers()
       isPlayingReactionRef.current = true
@@ -230,7 +245,7 @@ export function useMediaPlayback(
       const nextIndex = photoIndexForReaction(
         photoIndexRef.current,
         clipId,
-        photoUrlsRef.current.length,
+        photosRef.current.length,
       )
       const returnIndex = photoIndexRef.current
 
@@ -334,22 +349,22 @@ export function useMediaPlayback(
   }, [clearTimers])
 
   useEffect(() => {
-    if (usePhotos && photoUrls.length > 0) {
-      setPrimaryPhotoUrl(photoUrls[0])
+    if (usePhotos && photos.length > 0) {
+      setPrimaryPhoto(photos[0])
       photoIndexRef.current = 0
       setPhotoIndex(0)
     }
-  }, [photoUrls, usePhotos])
+  }, [photos, usePhotos])
 
   useEffect(() => {
     if (prevCrossfadeIntervalRef.current === crossfadeIntervalMs) return
     prevCrossfadeIntervalRef.current = crossfadeIntervalMs
 
-    if (!usePhotos || photoUrls.length <= 1 || isPlayingReactionRef.current) return
+    if (!usePhotos || photos.length <= 1 || isPlayingReactionRef.current) return
     if (!idleTimerRef.current) return
 
     scheduleIdleCycle()
-  }, [crossfadeIntervalMs, photoUrls.length, scheduleIdleCycle, usePhotos])
+  }, [crossfadeIntervalMs, photos.length, scheduleIdleCycle, usePhotos])
 
   return {
     mode: usePhotos ? ('photos' as const) : ('video' as const),
@@ -357,16 +372,16 @@ export function useMediaPlayback(
     secondaryRef,
     primaryOpacity,
     secondaryOpacity,
-    primaryPhotoUrl,
-    secondaryPhotoUrl,
+    primaryPhoto,
+    secondaryPhoto,
     primaryMotion,
     secondaryMotion,
     primaryMotionKey,
     secondaryMotionKey,
     currentClipId,
     photoIndex,
-    photoCount: photoUrls.length,
-    canNavigatePhotos: usePhotos && photoUrls.length > 1 && !isReactionPlaying,
+    photoCount: photos.length,
+    canNavigatePhotos: usePhotos && photos.length > 1 && !isReactionPlaying,
     isReactionPlaying,
     idleAnimationMs,
     crossfadeMs: usePhotos ? REACTION_CROSSFADE_MS : CROSSFADE_MS,
@@ -376,4 +391,23 @@ export function useMediaPlayback(
     goToNextPhoto,
     goToPrevPhoto,
   }
+}
+
+/** Build photo sources from legacy url + optional focal arrays. */
+export function buildPhotoSources(
+  photoUrls: string[],
+  photoFocalPoints?: Array<{ focalX: number; focalY: number }>,
+): PhotoSource[] {
+  if (!photoFocalPoints || photoFocalPoints.length === 0) {
+    return photoSourcesFromUrls(photoUrls)
+  }
+
+  return photoUrls.map((url, index) => {
+    const focal = photoFocalPoints[index]
+    return {
+      url,
+      focalX: focal?.focalX ?? DEFAULT_FOCAL_X,
+      focalY: focal?.focalY ?? DEFAULT_FOCAL_Y,
+    }
+  })
 }

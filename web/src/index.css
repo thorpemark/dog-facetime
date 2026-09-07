@@ -752,10 +752,46 @@ button {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.photo-thumb img {
+.photo-thumb-focus {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  position: relative;
+  cursor: pointer;
+}
+
+.photo-thumb-focus:disabled {
+  cursor: default;
+}
+
+.photo-thumb-focus img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+}
+
+.photo-focus-badge {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.75rem;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.photo-focus-badge.custom {
+  background: rgba(52, 199, 89, 0.85);
+  color: #fff;
 }
 
 .photo-remove {
@@ -793,6 +829,154 @@ button {
   font-size: 0.8rem;
   color: rgba(255, 255, 255, 0.45);
   margin-top: 8px;
+}
+
+/* Focal point editor */
+.focal-editor-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(env(safe-area-inset-top), 16px) 16px max(env(safe-area-inset-bottom), 16px);
+}
+
+.focal-editor {
+  width: min(100%, 420px);
+  max-height: 100%;
+  overflow-y: auto;
+  background: #1e2229;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.focal-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.focal-editor-header h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.focal-editor-close {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 4px 8px;
+}
+
+.focal-editor-lead {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 12px;
+  line-height: 1.45;
+}
+
+.focal-editor-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.focal-editor-canvas {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.focal-editor-canvas img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+.focal-image-frame {
+  position: absolute;
+  pointer-events: none;
+}
+
+.focal-crosshair {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.focal-crosshair::before,
+.focal-crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+
+.focal-crosshair::before {
+  left: 50%;
+  top: 4px;
+  width: 2px;
+  height: 20px;
+  transform: translateX(-50%);
+}
+
+.focal-crosshair::after {
+  top: 50%;
+  left: 4px;
+  width: 20px;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+.focal-preview-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.focal-preview-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.focal-preview-frame {
+  width: 120px;
+  height: 213px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-size: cover;
+  background-repeat: no-repeat;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.focal-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.focal-save-btn {
+  width: auto;
+  min-width: 120px;
+  padding: 10px 16px;
 }
 
 /* Call picker */
@@ -887,7 +1071,8 @@ button {
   position: absolute;
   inset: 0;
   background-size: cover;
-  background-position: center;
+  background-repeat: no-repeat;
+  transform-origin: var(--focal-x, 50%) var(--focal-y, 50%);
   will-change: transform, opacity;
 }
 
@@ -1012,30 +1197,91 @@ button {
   background: rgba(255, 255, 255, 0.25);
 }
 
-.ken-burns-speed-control {
+.ken-burns-speed-drawer {
   position: absolute;
-  left: 50%;
-  bottom: calc(max(env(safe-area-inset-bottom), 24px) + 196px);
-  z-index: 3;
-  transform: translateX(-50%);
+  right: 0;
+  bottom: calc(max(env(safe-area-inset-bottom), 24px) + 132px);
+  z-index: 4;
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.4);
+  align-items: center;
+  pointer-events: auto;
+}
+
+.ken-burns-speed-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 34px;
+  padding: 8px 6px 8px 4px;
+  border-radius: 12px 0 0 12px;
+  background: rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  pointer-events: auto;
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: none;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.ken-burns-speed-drawer.open .ken-burns-speed-tab {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.ken-burns-speed-tab-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+  opacity: 0.75;
+}
+
+.ken-burns-speed-tab-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ken-burns-speed-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  margin-right: -1px;
+  border-radius: 12px 0 0 12px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: none;
+  animation: ken-burns-drawer-in 0.2s ease;
+}
+
+@keyframes ken-burns-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .speed-btn {
   border: none;
   border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 0.75rem;
+  padding: 6px 12px;
+  font-size: 0.72rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.75);
   background: transparent;
+  white-space: nowrap;
   transition:
     background 0.15s ease,
     color 0.15s ease;

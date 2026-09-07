@@ -6,6 +6,10 @@ export interface MediaAsset {
   storagePath: string
   reactionTag: string | null
   sortOrder: number
+  /** Normalized horizontal focal point for portrait cover crop (0–1). */
+  focalX: number
+  /** Normalized vertical focal point for portrait cover crop (0–1). */
+  focalY: number
 }
 
 export interface CallTarget {
@@ -47,6 +51,8 @@ export interface CallSessionProfile {
   memorialTitle: string
   targetKind: CallTargetKind
   photoUrls: string[]
+  /** Per-photo focal points aligned with photoUrls. */
+  photoFocalPoints?: Array<{ focalX: number; focalY: number }>
   /** Future: per-reaction video clip URLs keyed by rule id */
   reactionMedia?: Record<string, string>
 }

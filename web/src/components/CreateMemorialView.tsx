@@ -1,11 +1,13 @@
 import { useCallback, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { CallTargetKind, Memorial } from '../types/memorial'
+import type { FocalPoint } from '../utils/focalPoint'
 import { useAuth } from '../context/AuthContext'
 import { addPendingClaim } from '../lib/pendingMemorials'
 import {
   createMemorial,
   deletePhoto,
+  updateMediaFocalPoint,
   upsertCallTarget,
   uploadPhoto,
 } from '../services/memorialService'
@@ -22,6 +24,8 @@ interface DraftPhoto {
   publicUrl: string
   storagePath?: string
   previewUrl?: string
+  focalX?: number
+  focalY?: number
 }
 
 interface TargetDraft {
@@ -38,7 +42,13 @@ function confirmUploadedPhoto(
   prev: TargetDraft,
   tempId: string,
   targetId: string,
-  asset: { id: string; publicUrl: string; storagePath?: string },
+  asset: {
+    id: string
+    publicUrl: string
+    storagePath?: string
+    focalX?: number
+    focalY?: number
+  },
 ): TargetDraft {
   const pending = prev.photos.find((p) => p.id === tempId)
   if (pending?.previewUrl) URL.revokeObjectURL(pending.previewUrl)
@@ -47,6 +57,8 @@ function confirmUploadedPhoto(
     id: asset.id,
     publicUrl: asset.publicUrl,
     storagePath: asset.storagePath,
+    focalX: asset.focalX,
+    focalY: asset.focalY,
   }
 
   const withoutTemp = prev.photos.filter((p) => p.id !== tempId)
@@ -210,6 +222,38 @@ export function CreateMemorialView() {
       })
     } catch (err) {
       reportError(err instanceof Error ? err.message : 'Delete failed', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleFocalChange = async (
+    mediaId: string,
+    focal: FocalPoint,
+    setDraft: React.Dispatch<React.SetStateAction<TargetDraft>>,
+  ) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const m = await ensureMemorial()
+      if (!m.editToken) {
+        throw new Error('Memorial is not ready yet.')
+      }
+      const updated = await updateMediaFocalPoint(m.editToken, mediaId, focal)
+      setDraft((prev) => ({
+        ...prev,
+        photos: prev.photos.map((photo) =>
+          photo.id === mediaId
+            ? {
+                ...photo,
+                focalX: updated.focalX,
+                focalY: updated.focalY,
+              }
+            : photo,
+        ),
+      }))
+    } catch (err) {
+      reportError(err instanceof Error ? err.message : 'Failed to save focus', err)
     } finally {
       setLoading(false)
     }
@@ -383,11 +427,16 @@ export function CreateMemorialView() {
                 storagePath: p.storagePath ?? '',
                 reactionTag: null,
                 sortOrder: 0,
+                focalX: p.focalX ?? 0.5,
+                focalY: p.focalY ?? 0.5,
               }))}
               onUpload={(files) =>
                 handleUpload('dog_a', dogA.displayName.trim() || 'Dog', 0, files, setDogA)
               }
               onDelete={(mediaId) => handleDeletePhoto(mediaId, setDogA)}
+              onFocalChange={(mediaId, focal) =>
+                handleFocalChange(mediaId, focal, setDogA)
+              }
               disabled={loading}
             />
             <button
@@ -434,11 +483,16 @@ export function CreateMemorialView() {
                 storagePath: p.storagePath ?? '',
                 reactionTag: null,
                 sortOrder: 0,
+                focalX: p.focalX ?? 0.5,
+                focalY: p.focalY ?? 0.5,
               }))}
               onUpload={(files) =>
                 handleUpload('dog_b', dogB.displayName.trim() || 'Dog 2', 1, files, setDogB)
               }
               onDelete={(mediaId) => handleDeletePhoto(mediaId, setDogB)}
+              onFocalChange={(mediaId, focal) =>
+                handleFocalChange(mediaId, focal, setDogB)
+              }
               disabled={loading}
             />
             <button
@@ -475,6 +529,8 @@ export function CreateMemorialView() {
                 storagePath: p.storagePath ?? '',
                 reactionTag: null,
                 sortOrder: 0,
+                focalX: p.focalX ?? 0.5,
+                focalY: p.focalY ?? 0.5,
               }))}
               onUpload={(files) =>
                 handleUpload(
@@ -486,6 +542,9 @@ export function CreateMemorialView() {
                 )
               }
               onDelete={(mediaId) => handleDeletePhoto(mediaId, setTogether)}
+              onFocalChange={(mediaId, focal) =>
+                handleFocalChange(mediaId, focal, setTogether)
+              }
               disabled={loading}
             />
             <button
