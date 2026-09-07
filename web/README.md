@@ -1,5 +1,7 @@
 # Memorial Call — Web App
 
+> **Clips fork:** This web app lives in [dog-facetime-clips-clips](https://github.com/thorpemark/dog-facetime-clips-clips). Voice reactions target prerendered clip buckets (`src/data/reactionCatalog.ts`). The still-image Ken Burns product is [dog-facetime-clips](https://github.com/thorpemark/dog-facetime-clips).
+
 A browser-based memorial video call experience. Create personal dog memorials, upload photos, share a link with family, and call one dog or two together — no account needed.
 
 ## Quick Start (Local)
@@ -30,8 +32,8 @@ Without Supabase env vars, the app runs in **demo mode** (memorials saved in `lo
 3. Run [`supabase/migration_auth_owners.sql`](supabase/migration_auth_owners.sql) for creator accounts and **My memorials**.
 4. If upgrading an existing project, also run [`supabase/migration_focal_point.sql`](supabase/migration_focal_point.sql) for portrait focal points.
 5. In **Authentication → URL Configuration**, set:
-   - **Site URL:** `https://thorpemark.github.io/dog-facetime/`
-   - **Redirect URLs:** `https://thorpemark.github.io/dog-facetime/` and `http://localhost:5173/` (local dev)
+   - **Site URL:** `https://thorpemark.github.io/dog-facetime-clips/`
+   - **Redirect URLs:** `https://thorpemark.github.io/dog-facetime-clips/` and `http://localhost:5173/` (local dev)
    - Magic links land on site **root** (not `/my`) so GitHub Pages serves `index.html` reliably; the app then navigates to My memorials.
 6. Enable **Email** magic links (default). Optionally enable **Google** under Authentication → Providers.
 7. Copy `web/.env.example` → `web/.env` and set:
@@ -51,7 +53,7 @@ Signed-in creators get memorials attached to their account (`owner_id`). Visit *
 
 ### Sign-in troubleshooting (Gmail / magic links)
 
-Magic links redirect to `https://thorpemark.github.io/dog-facetime/` (site root with base path). If Supabase **Redirect URLs** omit `/dog-facetime/` or point at `/my` only, users can hit 404s or refresh loops.
+Magic links redirect to `https://thorpemark.github.io/dog-facetime-clips/` (site root with base path). If Supabase **Redirect URLs** omit `/dog-facetime-clips/` or point at `/my` only, users can hit 404s or refresh loops.
 
 **Gmail** often prefetches links in email, which can consume a one-time magic link before you tap it. If the link fails:
 
@@ -91,13 +93,13 @@ A workflow at [`.github/workflows/deploy-web.yml`](../.github/workflows/deploy-w
 
 If these secrets were added **after** the first deploy, the live site stays in demo mode until you **re-run** the workflow: **Actions** → **Deploy Web App to GitHub Pages** → **Run workflow** (or push a new commit to `main`).
 
-The build sets `GITHUB_PAGES=true` so Vite uses base `/dog-facetime/` and emits `404.html` (SPA fallback for `/create`, `/m/:id`, `/edit/:token`).
+The build sets `GITHUB_PAGES=true` so Vite uses base `/dog-facetime-clips/` and emits `404.html` (SPA fallback for `/create`, `/m/:id`, `/edit/:token`).
 
 After the next push to `main`, the site will be live at:
 
-**https://thorpemark.github.io/dog-facetime/**
+**https://thorpemark.github.io/dog-facetime-clips/**
 
-(Replace `thorpemark/dog-facetime` with your fork if different.)
+(Replace `thorpemark/dog-facetime-clips` with your fork if different.)
 
 ## Using the App
 

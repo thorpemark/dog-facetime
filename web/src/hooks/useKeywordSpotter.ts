@@ -44,6 +44,9 @@ export function useKeywordSpotter(onMatch: (ruleId: string) => void) {
       )
       if (match) {
         lastMatchTimeRef.current = now
+        // match.id is the reaction bucket id (e.g. "come", "treat").
+        // TODO (clips fork): playback layer should call pickRandomClipForBucket(match.id)
+        // for a random prerendered variant — see reactionCatalog.ts + reactionClipUrlForBucket.
         onMatch(match.id)
       }
     },
