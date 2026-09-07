@@ -96,9 +96,15 @@ export function coverCropSize(imageAspect: number): { width: number; height: num
 
 export function maxFocalZoom(imageAspect: number): number {
   const crop = coverCropSize(imageAspect)
-  const widthZoom = crop.width > 0 ? 1 / crop.width : MAX_FOCAL_ZOOM
-  const heightZoom = crop.height > 0 ? 1 / crop.height : MAX_FOCAL_ZOOM
-  return Math.min(MAX_FOCAL_ZOOM, widthZoom, heightZoom)
+  let maxZoom = MAX_FOCAL_ZOOM
+  // Only constrain dimensions that are not already using the full image axis.
+  if (crop.width > 0 && crop.width < 1) {
+    maxZoom = Math.min(maxZoom, 1 / crop.width)
+  }
+  if (crop.height > 0 && crop.height < 1) {
+    maxZoom = Math.min(maxZoom, 1 / crop.height)
+  }
+  return maxZoom
 }
 
 export function isLandscapeImage(imageAspect: number): boolean {

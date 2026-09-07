@@ -974,6 +974,8 @@ button {
 .focal-zoom-control input[type='range'] {
   width: 100%;
   accent-color: #34c759;
+  touch-action: pan-x;
+  cursor: pointer;
 }
 
 .focal-zoom-value {
