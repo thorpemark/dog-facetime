@@ -107,7 +107,7 @@ After the next push to `main`, the site will be live at:
 | **Create flow** | Memorial name → Dog 1 photos → optional Dog 2 → optional Together → copy links |
 | **Share page** | Pick who to call (when multiple dogs), optional your name |
 | **Incoming Call** | FaceTime-style ring — Accept or Decline |
-| **Active Call** | Crossfading photos with Ken Burns motion, keyword reactions, debug panel |
+| **Active Call** | Crossfading photos with Ken Burns motion, speed + swipe/button photo controls, keyword reactions, debug panel |
 | **Edit page** | Upload photos, rename dogs, regenerate share link |
 
 ### Photo Playback (v1)
@@ -117,6 +117,12 @@ Uploaded photos are shown with a respectful “alive” presentation:
 - Idle: crossfading stills with subtle Ken Burns / breathing motion
 - Reactions: alternate photos + stronger motion presets (perk / excited / calm)
 - Structure supports swapping in real MP4 clips per reaction later
+
+**Call-screen controls** (photo mode only):
+
+- **Speed** — Slow / Normal / Fast segmented control; preference is saved in `localStorage` and adjusts Ken Burns animation duration plus auto-advance interval
+- **Manual navigation** — Swipe left/right on the photo area (touch or mouse drag), or tap the photo to reveal prev/next chevrons; auto-advance pauses ~10s after a manual change, then resumes
+- **During reactions** — Manual navigation is disabled while a keyword reaction is playing; the slideshow returns to the pre-reaction photo when the reaction ends
 
 Without uploaded photos, placeholder MP4 clips from `public/clips/` are used.
 
