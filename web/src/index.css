@@ -915,6 +915,7 @@ button {
   display: block;
   pointer-events: none;
   user-select: none;
+  -webkit-user-drag: none;
 }
 
 .focal-crop-frame {
