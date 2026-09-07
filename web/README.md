@@ -28,7 +28,10 @@ Without Supabase env vars, the app runs in **demo mode** (memorials saved in `lo
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL Editor, paste and run [`supabase/migration.sql`](supabase/migration.sql).
 3. Run [`supabase/migration_auth_owners.sql`](supabase/migration_auth_owners.sql) for creator accounts and **My memorials**.
-4. In **Authentication → URL Configuration**, add your site URL and redirect URLs (e.g. `https://thorpemark.github.io/dog-facetime/my` and `http://localhost:5173/my` for local dev).
+4. In **Authentication → URL Configuration**, set:
+   - **Site URL:** `https://thorpemark.github.io/dog-facetime/`
+   - **Redirect URLs:** `https://thorpemark.github.io/dog-facetime/` and `http://localhost:5173/` (local dev)
+   - Magic links land on site **root** (not `/my`) so GitHub Pages serves `index.html` reliably; the app then navigates to My memorials.
 5. Enable **Email** magic links (default). Optionally enable **Google** under Authentication → Providers.
 6. Copy `web/.env.example` → `web/.env` and set:
    - `VITE_SUPABASE_URL` — Project Settings → API → Project URL
@@ -44,6 +47,15 @@ Signed-in creators get memorials attached to their account (`owner_id`). Visit *
 - **Magic link email** — no password; works well on iPhone
 - **Google** (optional) — enable in Supabase Auth providers
 - **Anonymous create** still works — sign in afterward to claim memorials created in the same browser session
+
+### Sign-in troubleshooting (Gmail / magic links)
+
+Magic links redirect to `https://thorpemark.github.io/dog-facetime/` (site root with base path). If Supabase **Redirect URLs** omit `/dog-facetime/` or point at `/my` only, users can hit 404s or refresh loops.
+
+**Gmail** often prefetches links in email, which can consume a one-time magic link before you tap it. If the link fails:
+
+1. On the sign-in screen, enter the **6-digit code** from the same email (recommended).
+2. Or open the link in **Safari/Chrome** (⋯ → Open in Safari) — not Gmail’s in-app browser.
 
 **Photo upload troubleshooting:** The web app never inserts into `media_assets` directly — uploads go to storage at `{editToken}/{targetId}/…` and rows are created only via the `register_media_asset` RPC (tables have RLS with no anon INSERT policies). If registration fails with an RLS error, re-run [`supabase/migration.sql`](supabase/migration.sql) so the SECURITY DEFINER RPCs are present. Storage bucket policies can be relaxed to `bucket_id = 'memorial-photos'` only; the code fix above is still required for `media_assets`.
 

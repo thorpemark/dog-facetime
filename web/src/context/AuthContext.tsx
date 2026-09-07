@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { authRedirectUrl } from '../lib/authRedirect'
+import { authRedirectUrl, setPostAuthPath } from '../lib/authRedirect'
 import { getSupabase, isSupabaseConfigured } from '../lib/supabase'
 import { claimPendingMemorials } from '../services/memorialService'
 
@@ -18,6 +18,7 @@ interface AuthContextValue {
   loading: boolean
   authAvailable: boolean
   signInWithEmail: (email: string) => Promise<{ error: string | null }>
+  verifyEmailOtp: (email: string, code: string) => Promise<{ error: string | null }>
   signInWithGoogle: () => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   claimPending: () => Promise<number>
@@ -73,11 +74,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabase = getSupabase()
     if (!supabase) return { error: 'Sign-in is not available in demo mode' }
 
+    setPostAuthPath('/my')
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {
-        emailRedirectTo: authRedirectUrl('/my'),
+        emailRedirectTo: authRedirectUrl(),
       },
+    })
+    return { error: error?.message ?? null }
+  }, [])
+
+  const verifyEmailOtp = useCallback(async (email: string, code: string) => {
+    const supabase = getSupabase()
+    if (!supabase) return { error: 'Sign-in is not available in demo mode' }
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: code.trim(),
+      type: 'email',
     })
     return { error: error?.message ?? null }
   }, [])
@@ -86,10 +100,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabase = getSupabase()
     if (!supabase) return { error: 'Sign-in is not available in demo mode' }
 
+    setPostAuthPath('/my')
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: authRedirectUrl('/my'),
+        redirectTo: authRedirectUrl(),
       },
     })
     return { error: error?.message ?? null }
@@ -108,11 +123,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       authAvailable: isSupabaseConfigured,
       signInWithEmail,
+      verifyEmailOtp,
       signInWithGoogle,
       signOut,
       claimPending,
     }),
-    [user, session, loading, signInWithEmail, signInWithGoogle, signOut, claimPending],
+    [user, session, loading, signInWithEmail, verifyEmailOtp, signInWithGoogle, signOut, claimPending],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

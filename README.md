@@ -187,7 +187,7 @@ See **[`web/README.md`](web/README.md)** for full details. Summary:
 1. Create a Supabase project
 2. Run [`web/supabase/migration.sql`](web/supabase/migration.sql) in the SQL editor
 3. Run [`web/supabase/migration_auth_owners.sql`](web/supabase/migration_auth_owners.sql) for creator accounts
-4. Configure Auth redirect URLs (see [`web/README.md`](web/README.md))
+4. Configure Auth redirect URLs (site root `https://thorpemark.github.io/dog-facetime/`, not `/my` — see [`web/README.md`](web/README.md))
 5. Copy `web/.env.example` → `web/.env` with your URL and anon key
 6. Rebuild / redeploy
 

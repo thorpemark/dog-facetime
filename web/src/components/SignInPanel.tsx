@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { consumePostAuthPath } from '../lib/authRedirect'
 
 interface SignInPanelProps {
   onSuccess?: () => void
@@ -7,9 +9,11 @@ interface SignInPanelProps {
 }
 
 export function SignInPanel({ onSuccess, compact = false }: SignInPanelProps) {
-  const { signInWithEmail, signInWithGoogle, authAvailable } = useAuth()
+  const navigate = useNavigate()
+  const { signInWithEmail, verifyEmailOtp, signInWithGoogle, authAvailable } = useAuth()
   const [email, setEmail] = useState('')
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [otpCode, setOtpCode] = useState('')
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'verifying' | 'error'>('idle')
   const [message, setMessage] = useState<string | null>(null)
 
   if (!authAvailable) {
@@ -32,8 +36,24 @@ export function SignInPanel({ onSuccess, compact = false }: SignInPanelProps) {
       return
     }
     setStatus('sent')
-    setMessage('Check your email for a sign-in link. It works great on iPhone.')
+    setMessage(null)
     onSuccess?.()
+  }
+
+  const verifyCode = async () => {
+    const trimmedEmail = email.trim()
+    const trimmedCode = otpCode.trim()
+    if (!trimmedEmail || !trimmedCode) return
+    setStatus('verifying')
+    setMessage(null)
+    const { error } = await verifyEmailOtp(trimmedEmail, trimmedCode)
+    if (error) {
+      setStatus('sent')
+      setMessage(error)
+      return
+    }
+    consumePostAuthPath()
+    navigate('/my', { replace: true })
   }
 
   const signInGoogle = async () => {
@@ -54,15 +74,44 @@ export function SignInPanel({ onSuccess, compact = false }: SignInPanelProps) {
           : 'We’ll email you a magic link — no password needed.'}
       </p>
 
-      {status === 'sent' ? (
+      {status === 'sent' || status === 'verifying' ? (
         <div className="sign-in-sent">
           <span className="sign-in-sent-icon">✉️</span>
-          <p>{message}</p>
+          <p>Check your email for a sign-in link or 6-digit code.</p>
+          <p className="auth-hint sign-in-gmail-tip">
+            <strong>Gmail tip:</strong> tap the link’s menu (⋯) and choose{' '}
+            <strong>Open in Safari</strong> or <strong>Chrome</strong> — not Gmail’s in-app
+            browser. Gmail may prefetch links and break magic links; the code below always works.
+          </p>
+
+          <label className="sign-in-email-label">
+            6-digit code from email
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="123456"
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+              onKeyDown={(e) => e.key === 'Enter' && verifyCode()}
+              disabled={status === 'verifying'}
+            />
+          </label>
+          <button
+            type="button"
+            className="btn-call"
+            disabled={otpCode.trim().length < 6 || status === 'verifying'}
+            onClick={verifyCode}
+          >
+            {status === 'verifying' ? 'Verifying…' : 'Sign in with code'}
+          </button>
+
           <button
             type="button"
             className="btn-text"
             onClick={() => {
               setStatus('idle')
+              setOtpCode('')
               setMessage(null)
             }}
           >
@@ -107,6 +156,7 @@ export function SignInPanel({ onSuccess, compact = false }: SignInPanelProps) {
       )}
 
       {status === 'error' && message && <p className="form-error">{message}</p>}
+      {status === 'sent' && message && <p className="form-error">{message}</p>}
     </div>
   )
 }

@@ -1055,6 +1055,19 @@ button {
   margin-bottom: 8px;
 }
 
+.sign-in-gmail-tip {
+  text-align: left;
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 200, 64, 0.08);
+  border: 1px solid rgba(255, 200, 64, 0.2);
+}
+
+.sign-in-gmail-tip strong {
+  color: rgba(255, 220, 120, 0.95);
+}
+
 .auth-hint {
   color: rgba(255, 255, 255, 0.5);
   font-size: 0.85rem;
