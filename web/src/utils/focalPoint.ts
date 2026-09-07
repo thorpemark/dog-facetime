@@ -39,8 +39,18 @@ export function photoSourcesFromUrls(urls: string[]): PhotoSource[] {
   return urls.map((url) => photoSourceFromUrl(url))
 }
 
-export function backgroundPositionStyle(focal: FocalPoint): string {
+export function focalPositionStyle(focal: FocalPoint): string {
   return `${focal.focalX * 100}% ${focal.focalY * 100}%`
+}
+
+/** Background-position for cover-cropped photo layers. */
+export function backgroundPositionStyle(focal: FocalPoint): string {
+  return focalPositionStyle(focal)
+}
+
+/** Object-position for cover-cropped <img> photo layers. */
+export function objectPositionStyle(focal: FocalPoint): string {
+  return focalPositionStyle(focal)
 }
 
 export function transformOriginStyle(focal: FocalPoint): string {

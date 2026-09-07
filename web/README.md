@@ -128,7 +128,7 @@ Uploaded photos are shown with a respectful “alive” presentation:
 **Portrait framing (focal point):**
 
 - On create/edit, tap a photo to set a focus point with a live portrait preview
-- Stored per photo as normalized `focal_x` / `focal_y` (default center); applied on the call screen via `background-position` and Ken Burns transform origin
+- Stored per photo as normalized `focal_x` / `focal_y` (default center); applied on the call screen via `object-position` / Ken Burns transform origin (full-bleed `object-fit: cover` on the call stage)
 - Existing Supabase projects: run [`supabase/migration_focal_point.sql`](supabase/migration_focal_point.sql) after the base migration
 
 Without uploaded photos, placeholder MP4 clips from `public/clips/` are used.
