@@ -1,0 +1,34 @@
+name: Publish scaffold to dog-facetime-clips
+
+# One-time setup:
+# 1. Create a fine-grained PAT with Contents: Read and write on thorpemark/dog-facetime-clips
+# 2. Add it as repo secret DOG_FACETIME_CLIPS_PUSH_TOKEN on thorpemark/dog-facetime
+# 3. Actions → this workflow → Run workflow
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cursor/clip-library-scaffold-b343
+          fetch-depth: 0
+
+      - name: Push to dog-facetime-clips
+        env:
+          CLIPS_TOKEN: ${{ secrets.DOG_FACETIME_CLIPS_PUSH_TOKEN }}
+        run: |
+          if [ -z "$CLIPS_TOKEN" ]; then
+            echo "::error::Add DOG_FACETIME_CLIPS_PUSH_TOKEN to thorpemark/dog-facetime secrets (PAT with write on dog-facetime-clips)."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add clips "https://x-access-token:${CLIPS_TOKEN}@github.com/thorpemark/dog-facetime-clips.git"
+          git push clips HEAD:main
+          git push clips HEAD:cursor/clip-library-scaffold-b343
