@@ -3,6 +3,7 @@ import { CallControlsView } from './CallControlsView'
 import { CameraPreviewPlaceholder } from './CameraPreviewPlaceholder'
 import { DebugPanelView } from './DebugPanelView'
 import { DualMediaView } from './DualMediaView'
+import { PhotoPlaybackControls } from './PhotoPlaybackControls'
 
 function statusText(
   behaviorState: ReturnType<typeof useMemorialCall>['behaviorState'],
@@ -31,6 +32,7 @@ export function ActiveCallView() {
   return (
     <div className="screen active-call-screen">
       <DualMediaView />
+      <PhotoPlaybackControls />
 
       <div className="call-overlay">
         <header className="call-header">

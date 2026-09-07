@@ -892,7 +892,8 @@ button {
 }
 
 .photo-layer.motion-idle {
-  animation: ken-burns-idle 12s ease-in-out infinite alternate;
+  animation: ken-burns-idle var(--ken-burns-idle-duration, 12s) ease-in-out infinite
+    alternate;
 }
 
 .photo-layer.motion-perk {
@@ -950,6 +951,99 @@ button {
   100% {
     transform: scale(1) translate(0, 0.5%);
   }
+}
+
+/* Photo playback controls (Ken Burns slideshow) */
+.photo-touch-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  touch-action: pan-y;
+}
+
+.photo-nav-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(max(env(safe-area-inset-bottom), 24px) + 248px);
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  gap: 120px;
+  padding: 0 16px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.photo-nav-row.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.photo-nav-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.75rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition:
+    background 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.photo-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.photo-nav-btn:not(:disabled):active {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.ken-burns-speed-control {
+  position: absolute;
+  left: 50%;
+  bottom: calc(max(env(safe-area-inset-bottom), 24px) + 196px);
+  z-index: 3;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+.speed-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+  background: transparent;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.speed-btn.active {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
 }
 
 /* App header / auth */

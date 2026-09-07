@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { useMemorialCall } from '../context/MemorialCallContext'
 
 export function DualMediaView() {
@@ -12,15 +13,22 @@ export function DualMediaView() {
     secondaryPhotoUrl,
     primaryMotion,
     secondaryMotion,
+    primaryMotionKey,
+    secondaryMotionKey,
+    idleAnimationMs,
     crossfadeMs,
   } = mediaPlayback
 
   const transition = `opacity ${crossfadeMs}ms ease-in-out`
+  const kenBurnsStyle = {
+    '--ken-burns-idle-duration': `${idleAnimationMs}ms`,
+  } as CSSProperties
 
   if (mode === 'photos') {
     return (
-      <div className="dual-video dual-media">
+      <div className="dual-video dual-media" style={kenBurnsStyle}>
         <div
+          key={`primary-${primaryPhotoUrl}-${primaryMotionKey}`}
           className={`photo-layer motion-${primaryMotion}`}
           style={{
             opacity: primaryOpacity,
@@ -32,6 +40,7 @@ export function DualMediaView() {
         />
         {secondaryPhotoUrl && (
           <div
+            key={`secondary-${secondaryPhotoUrl}-${secondaryMotionKey}`}
             className={`photo-layer motion-${secondaryMotion}`}
             style={{
               opacity: secondaryOpacity,

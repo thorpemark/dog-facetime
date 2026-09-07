@@ -8,8 +8,10 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { useKenBurnsSpeed } from '../hooks/useKenBurnsSpeed'
 import { useKeywordSpotter } from '../hooks/useKeywordSpotter'
 import { useMediaPlayback } from '../hooks/useMediaPlayback'
+import type { KenBurnsSpeed } from '../utils/kenBurnsSpeed'
 import type {
   BehaviorState,
   CallPhase,
@@ -31,6 +33,8 @@ interface MemorialCallContextValue {
   speechSupported: boolean
   speechError: string | null
   mediaPlayback: ReturnType<typeof useMediaPlayback>
+  kenBurnsSpeed: KenBurnsSpeed
+  setKenBurnsSpeed: (speed: KenBurnsSpeed) => void
   beginIncomingCall: () => void
   acceptCall: () => void
   endCall: () => void
@@ -89,7 +93,17 @@ export function MemorialCallProvider({
     triggerReactionRef.current(ruleId)
   })
 
-  const mediaPlayback = useMediaPlayback(photoUrls, rulesConfig)
+  const {
+    speed: kenBurnsSpeed,
+    setSpeed: setKenBurnsSpeed,
+    idleAnimationMs,
+    crossfadeIntervalMs,
+  } = useKenBurnsSpeed()
+
+  const mediaPlayback = useMediaPlayback(photoUrls, rulesConfig, {
+    crossfadeIntervalMs,
+    idleAnimationMs,
+  })
 
   const startListening = useCallback(() => {
     if (
@@ -201,6 +215,8 @@ export function MemorialCallProvider({
       speechSupported: keywordSpotter.speechSupported,
       speechError: keywordSpotter.speechError,
       mediaPlayback,
+      kenBurnsSpeed,
+      setKenBurnsSpeed,
       beginIncomingCall,
       acceptCall,
       endCall,
@@ -222,6 +238,8 @@ export function MemorialCallProvider({
       keywordSpotter.speechError,
       keywordSpotter.triggerPhrase,
       mediaPlayback,
+      kenBurnsSpeed,
+      setKenBurnsSpeed,
       beginIncomingCall,
       acceptCall,
       endCall,

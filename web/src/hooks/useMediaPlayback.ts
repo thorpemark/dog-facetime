@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { KeywordRulesConfig } from '../types'
 import type { MotionPreset } from '../types/memorial'
 import { clipUrl } from '../utils/keywordRules'
+import { MANUAL_NAV_PAUSE_MS } from '../utils/kenBurnsSpeed'
 import {
-  IDLE_CROSSFADE_MS,
   REACTION_CROSSFADE_MS,
   REACTION_DURATION_MS,
   photoIndexForReaction,
@@ -12,10 +12,20 @@ import {
 
 const CROSSFADE_MS = 400
 
+interface UseMediaPlaybackOptions {
+  crossfadeIntervalMs: number
+  idleAnimationMs: number
+}
+
 export function useMediaPlayback(
   photoUrls: string[],
   rulesConfig: KeywordRulesConfig | null,
+  options: UseMediaPlaybackOptions = {
+    crossfadeIntervalMs: 5_000,
+    idleAnimationMs: 12_000,
+  },
 ) {
+  const { crossfadeIntervalMs, idleAnimationMs } = options
   const usePhotos = photoUrls.length > 0
 
   const primaryRef = useRef<HTMLVideoElement>(null)
@@ -34,12 +44,25 @@ export function useMediaPlayback(
   const [secondaryPhotoUrl, setSecondaryPhotoUrl] = useState<string | null>(null)
   const [primaryMotion, setPrimaryMotion] = useState<MotionPreset>('idle')
   const [secondaryMotion, setSecondaryMotion] = useState<MotionPreset>('idle')
+  const [primaryMotionKey, setPrimaryMotionKey] = useState(0)
+  const [secondaryMotionKey, setSecondaryMotionKey] = useState(0)
+  const [isReactionPlaying, setIsReactionPlaying] = useState(false)
 
   const activeSlotRef = useRef<'primary' | 'secondary'>('primary')
+  const photoIndexRef = useRef(0)
+  const activePhotoSlotRef = useRef<'primary' | 'secondary'>('primary')
   const isPlayingReactionRef = useRef(false)
   const onCompleteRef = useRef<(() => void) | null>(null)
   const idleTimerRef = useRef<number | null>(null)
   const reactionTimerRef = useRef<number | null>(null)
+  const photoUrlsRef = useRef(photoUrls)
+  const crossfadeIntervalRef = useRef(crossfadeIntervalMs)
+  const prevCrossfadeIntervalRef = useRef(crossfadeIntervalMs)
+
+  photoUrlsRef.current = photoUrls
+  crossfadeIntervalRef.current = crossfadeIntervalMs
+  photoIndexRef.current = photoIndex
+  activePhotoSlotRef.current = activePhotoSlot
 
   const crossfadeTo = useCallback((slot: 'primary' | 'secondary') => {
     if (slot === 'primary') {
@@ -54,6 +77,7 @@ export function useMediaPlayback(
 
   const crossfadePhotosTo = useCallback((slot: 'primary' | 'secondary') => {
     setActivePhotoSlot(slot)
+    activePhotoSlotRef.current = slot
     if (slot === 'primary') {
       setPrimaryOpacity(1)
       setSecondaryOpacity(0)
@@ -70,40 +94,103 @@ export function useMediaPlayback(
     reactionTimerRef.current = null
   }, [])
 
-  const scheduleIdleCycle = useCallback(() => {
-    if (!usePhotos || photoUrls.length <= 1 || isPlayingReactionRef.current) return
-    if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current)
+  const bumpMotionKey = useCallback((slot: 'primary' | 'secondary') => {
+    if (slot === 'primary') {
+      setPrimaryMotionKey((key) => key + 1)
+    } else {
+      setSecondaryMotionKey((key) => key + 1)
+    }
+  }, [])
 
-    idleTimerRef.current = window.setTimeout(() => {
-      if (isPlayingReactionRef.current) return
-      const nextIndex = (photoIndex + 1) % photoUrls.length
-      const incoming = activePhotoSlot === 'primary' ? 'secondary' : 'primary'
+  const showPhotoAtIndex = useCallback(
+    (
+      nextIndex: number,
+      motion: MotionPreset = 'idle',
+      options?: { restartMotion?: boolean },
+    ) => {
+      const urls = photoUrlsRef.current
+      if (urls.length === 0) return
+
+      const normalized =
+        ((nextIndex % urls.length) + urls.length) % urls.length
+      const incoming =
+        activePhotoSlotRef.current === 'primary' ? 'secondary' : 'primary'
 
       if (incoming === 'secondary') {
-        setSecondaryPhotoUrl(photoUrls[nextIndex])
-        setSecondaryMotion('idle')
+        setSecondaryPhotoUrl(urls[normalized])
+        setSecondaryMotion(motion)
+        if (options?.restartMotion) bumpMotionKey('secondary')
         crossfadePhotosTo('secondary')
       } else {
-        setPrimaryPhotoUrl(photoUrls[nextIndex])
-        setPrimaryMotion('idle')
+        setPrimaryPhotoUrl(urls[normalized])
+        setPrimaryMotion(motion)
+        if (options?.restartMotion) bumpMotionKey('primary')
         crossfadePhotosTo('primary')
       }
-      setPhotoIndex(nextIndex)
-      scheduleIdleCycle()
-    }, IDLE_CROSSFADE_MS)
-  }, [activePhotoSlot, crossfadePhotosTo, photoIndex, photoUrls, usePhotos])
+
+      photoIndexRef.current = normalized
+      setPhotoIndex(normalized)
+    },
+    [bumpMotionKey, crossfadePhotosTo],
+  )
+
+  const scheduleIdleCycle = useCallback(
+    (delayMs = crossfadeIntervalRef.current) => {
+      const urls = photoUrlsRef.current
+      if (!usePhotos || urls.length <= 1 || isPlayingReactionRef.current) return
+      if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current)
+
+      idleTimerRef.current = window.setTimeout(() => {
+        if (isPlayingReactionRef.current) return
+        const nextIndex = (photoIndexRef.current + 1) % urls.length
+        showPhotoAtIndex(nextIndex, 'idle', { restartMotion: true })
+        scheduleIdleCycleRef.current()
+      }, delayMs)
+    },
+    [showPhotoAtIndex, usePhotos],
+  )
+
+  const scheduleIdleCycleRef = useRef(scheduleIdleCycle)
+  scheduleIdleCycleRef.current = scheduleIdleCycle
+
+  const goToPhoto = useCallback(
+    (nextIndex: number) => {
+      if (!usePhotos || photoUrlsRef.current.length === 0) return
+      if (isPlayingReactionRef.current) return
+
+      clearTimers()
+      showPhotoAtIndex(nextIndex, 'idle', { restartMotion: true })
+      if (photoUrlsRef.current.length > 1) {
+        scheduleIdleCycle(MANUAL_NAV_PAUSE_MS)
+      }
+    },
+    [clearTimers, scheduleIdleCycle, showPhotoAtIndex, usePhotos],
+  )
+
+  const goToNextPhoto = useCallback(() => {
+    goToPhoto(photoIndexRef.current + 1)
+  }, [goToPhoto])
+
+  const goToPrevPhoto = useCallback(() => {
+    goToPhoto(photoIndexRef.current - 1)
+  }, [goToPhoto])
 
   const loadIdle = useCallback(() => {
     clearTimers()
     isPlayingReactionRef.current = false
+    setIsReactionPlaying(false)
     setCurrentClipId('idle')
 
     if (usePhotos) {
+      photoIndexRef.current = 0
+      activePhotoSlotRef.current = 'primary'
       setPhotoIndex(0)
       setPrimaryPhotoUrl(photoUrls[0] ?? null)
       setSecondaryPhotoUrl(null)
       setPrimaryMotion('idle')
       setSecondaryMotion('idle')
+      setPrimaryMotionKey(0)
+      setSecondaryMotionKey(0)
       setActivePhotoSlot('primary')
       setPrimaryOpacity(1)
       setSecondaryOpacity(0)
@@ -131,57 +218,35 @@ export function useMediaPlayback(
 
   const playPhotoReaction = useCallback(
     (clipId: string, onComplete: () => void) => {
-      if (isPlayingReactionRef.current || photoUrls.length === 0) return
+      if (isPlayingReactionRef.current || photoUrlsRef.current.length === 0) return
 
       clearTimers()
       isPlayingReactionRef.current = true
+      setIsReactionPlaying(true)
       onCompleteRef.current = onComplete
       setCurrentClipId(clipId)
 
       const preset = presetForRule(clipId)
-      const nextIndex = photoIndexForReaction(photoIndex, clipId, photoUrls.length)
-      const incoming = activePhotoSlot === 'primary' ? 'secondary' : 'primary'
+      const nextIndex = photoIndexForReaction(
+        photoIndexRef.current,
+        clipId,
+        photoUrlsRef.current.length,
+      )
+      const returnIndex = photoIndexRef.current
 
-      if (incoming === 'secondary') {
-        setSecondaryPhotoUrl(photoUrls[nextIndex])
-        setSecondaryMotion(preset)
-        crossfadePhotosTo('secondary')
-      } else {
-        setPrimaryPhotoUrl(photoUrls[nextIndex])
-        setPrimaryMotion(preset)
-        crossfadePhotosTo('primary')
-      }
-      setPhotoIndex(nextIndex)
+      showPhotoAtIndex(nextIndex, preset, { restartMotion: true })
 
       reactionTimerRef.current = window.setTimeout(() => {
-        const returnIndex = photoIndex
-        const returnSlot = activePhotoSlot === 'primary' ? 'secondary' : 'primary'
-
-        if (returnSlot === 'secondary') {
-          setSecondaryPhotoUrl(photoUrls[returnIndex])
-          setSecondaryMotion('idle')
-          crossfadePhotosTo('secondary')
-        } else {
-          setPrimaryPhotoUrl(photoUrls[returnIndex])
-          setPrimaryMotion('idle')
-          crossfadePhotosTo('primary')
-        }
-
+        showPhotoAtIndex(returnIndex, 'idle', { restartMotion: true })
         setCurrentClipId('idle')
         isPlayingReactionRef.current = false
+        setIsReactionPlaying(false)
         onCompleteRef.current?.()
         onCompleteRef.current = null
         scheduleIdleCycle()
       }, REACTION_DURATION_MS)
     },
-    [
-      activePhotoSlot,
-      clearTimers,
-      crossfadePhotosTo,
-      photoIndex,
-      photoUrls,
-      scheduleIdleCycle,
-    ],
+    [clearTimers, scheduleIdleCycle, showPhotoAtIndex],
   )
 
   const playVideoReaction = useCallback(
@@ -197,6 +262,7 @@ export function useMediaPlayback(
       if (!incomingVideo) return
 
       isPlayingReactionRef.current = true
+      setIsReactionPlaying(true)
       onCompleteRef.current = onComplete
       setCurrentClipId(clipId)
 
@@ -222,6 +288,7 @@ export function useMediaPlayback(
           crossfadeTo(idleSlot)
           setCurrentClipId('idle')
           isPlayingReactionRef.current = false
+          setIsReactionPlaying(false)
           onCompleteRef.current?.()
           onCompleteRef.current = null
         }
@@ -258,6 +325,7 @@ export function useMediaPlayback(
     primaryRef.current?.pause()
     secondaryRef.current?.pause()
     isPlayingReactionRef.current = false
+    setIsReactionPlaying(false)
     onCompleteRef.current = null
   }, [clearTimers])
 
@@ -268,9 +336,20 @@ export function useMediaPlayback(
   useEffect(() => {
     if (usePhotos && photoUrls.length > 0) {
       setPrimaryPhotoUrl(photoUrls[0])
+      photoIndexRef.current = 0
       setPhotoIndex(0)
     }
   }, [photoUrls, usePhotos])
+
+  useEffect(() => {
+    if (prevCrossfadeIntervalRef.current === crossfadeIntervalMs) return
+    prevCrossfadeIntervalRef.current = crossfadeIntervalMs
+
+    if (!usePhotos || photoUrls.length <= 1 || isPlayingReactionRef.current) return
+    if (!idleTimerRef.current) return
+
+    scheduleIdleCycle()
+  }, [crossfadeIntervalMs, photoUrls.length, scheduleIdleCycle, usePhotos])
 
   return {
     mode: usePhotos ? ('photos' as const) : ('video' as const),
@@ -282,10 +361,19 @@ export function useMediaPlayback(
     secondaryPhotoUrl,
     primaryMotion,
     secondaryMotion,
+    primaryMotionKey,
+    secondaryMotionKey,
     currentClipId,
+    photoIndex,
+    photoCount: photoUrls.length,
+    canNavigatePhotos: usePhotos && photoUrls.length > 1 && !isReactionPlaying,
+    isReactionPlaying,
+    idleAnimationMs,
     crossfadeMs: usePhotos ? REACTION_CROSSFADE_MS : CROSSFADE_MS,
     loadIdle,
     playReaction,
     stop,
+    goToNextPhoto,
+    goToPrevPhoto,
   }
 }
