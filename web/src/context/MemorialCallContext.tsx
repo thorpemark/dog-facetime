@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { useKenBurnsSpeed } from '../hooks/useKenBurnsSpeed'
 import { useKeywordSpotter } from '../hooks/useKeywordSpotter'
-import { useMediaPlayback } from '../hooks/useMediaPlayback'
+import { buildPhotoSources, useMediaPlayback } from '../hooks/useMediaPlayback'
 import type { KenBurnsSpeed } from '../utils/kenBurnsSpeed'
 import type {
   BehaviorState,
@@ -58,6 +58,10 @@ export function MemorialCallProvider({
 }: MemorialCallProviderProps) {
   const profile = initialProfile ?? DEFAULT_PROFILE
   const photoUrls = profile.photoUrls ?? []
+  const photos = useMemo(
+    () => buildPhotoSources(photoUrls, profile.photoFocalPoints),
+    [photoUrls, profile.photoFocalPoints],
+  )
 
   const [callPhase, setCallPhase] = useState<CallPhase>('home')
   const [behaviorState, setBehaviorState] = useState<BehaviorState>({
@@ -100,7 +104,7 @@ export function MemorialCallProvider({
     crossfadeIntervalMs,
   } = useKenBurnsSpeed()
 
-  const mediaPlayback = useMediaPlayback(photoUrls, rulesConfig, {
+  const mediaPlayback = useMediaPlayback(photos, rulesConfig, {
     crossfadeIntervalMs,
     idleAnimationMs,
   })

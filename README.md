@@ -48,7 +48,8 @@ See the sections below for iOS-specific details (clips, keywords, CI).
 
 - Create personal memorials with 1–3 call targets (Dog A, Dog B, Together)
 - Upload photos; crossfading Ken Burns playback during calls
-- **Call-screen photo controls** — Slow/Normal/Fast Ken Burns speed (saved in browser), swipe or tap prev/next between photos
+- **Call-screen photo controls** — Side-drawer Ken Burns speed (saved in browser), swipe or tap prev/next between photos
+- **Portrait focal points** — Tap photos on create/edit to choose what stays centered in portrait calls
 - Share links for family (`/m/:shareId`) — no account needed
 - Secret edit links (`/edit/:editToken`) for owners
 - Optional creator sign-in (magic link + Google) with **My memorials** dashboard

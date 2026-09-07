@@ -28,15 +28,16 @@ Without Supabase env vars, the app runs in **demo mode** (memorials saved in `lo
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL Editor, paste and run [`supabase/migration.sql`](supabase/migration.sql).
 3. Run [`supabase/migration_auth_owners.sql`](supabase/migration_auth_owners.sql) for creator accounts and **My memorials**.
-4. In **Authentication → URL Configuration**, set:
+4. If upgrading an existing project, also run [`supabase/migration_focal_point.sql`](supabase/migration_focal_point.sql) for portrait focal points.
+5. In **Authentication → URL Configuration**, set:
    - **Site URL:** `https://thorpemark.github.io/dog-facetime/`
    - **Redirect URLs:** `https://thorpemark.github.io/dog-facetime/` and `http://localhost:5173/` (local dev)
    - Magic links land on site **root** (not `/my`) so GitHub Pages serves `index.html` reliably; the app then navigates to My memorials.
-5. Enable **Email** magic links (default). Optionally enable **Google** under Authentication → Providers.
-6. Copy `web/.env.example` → `web/.env` and set:
+6. Enable **Email** magic links (default). Optionally enable **Google** under Authentication → Providers.
+7. Copy `web/.env.example` → `web/.env` and set:
    - `VITE_SUPABASE_URL` — Project Settings → API → Project URL
    - `VITE_SUPABASE_ANON_KEY` — Project Settings → API → `anon` `public` key
-7. Rebuild and redeploy (`npm run build` locally, or push to `main` for GitHub Pages).
+8. Rebuild and redeploy (`npm run build` locally, or push to `main` for GitHub Pages).
 
 After setup, memorials are stored in Supabase with public share links (`/m/:shareId`) and secret edit links (`/edit/:editToken`). Photos upload to the `memorial-photos` storage bucket.
 
@@ -107,8 +108,8 @@ After the next push to `main`, the site will be live at:
 | **Create flow** | Memorial name → Dog 1 photos → optional Dog 2 → optional Together → copy links |
 | **Share page** | Pick who to call (when multiple dogs), optional your name |
 | **Incoming Call** | FaceTime-style ring — Accept or Decline |
-| **Active Call** | Crossfading photos with Ken Burns motion, speed + swipe/button photo controls, keyword reactions, debug panel |
-| **Edit page** | Upload photos, rename dogs, regenerate share link |
+| **Active Call** | Crossfading photos with Ken Burns motion, side-drawer speed control + swipe/button photo nav, keyword reactions, debug panel |
+| **Edit page** | Upload photos, set portrait focal points, rename dogs, regenerate share link |
 
 ### Photo Playback (v1)
 
@@ -120,9 +121,15 @@ Uploaded photos are shown with a respectful “alive” presentation:
 
 **Call-screen controls** (photo mode only):
 
-- **Speed** — Slow / Normal / Fast segmented control; preference is saved in `localStorage` and adjusts Ken Burns animation duration plus auto-advance interval
+- **Speed** — Compact side drawer tab (right edge, above call controls) expands to Slow / Normal / Fast; preference saved in `localStorage`; auto-collapses after selection or a few seconds
 - **Manual navigation** — Swipe left/right on the photo area (touch or mouse drag), or tap the photo to reveal prev/next chevrons; auto-advance pauses ~10s after a manual change, then resumes
 - **During reactions** — Manual navigation is disabled while a keyword reaction is playing; the slideshow returns to the pre-reaction photo when the reaction ends
+
+**Portrait framing (focal point):**
+
+- On create/edit, tap a photo to set a focus point with a live portrait preview
+- Stored per photo as normalized `focal_x` / `focal_y` (default center); applied on the call screen via `background-position` and Ken Burns transform origin
+- Existing Supabase projects: run [`supabase/migration_focal_point.sql`](supabase/migration_focal_point.sql) after the base migration
 
 Without uploaded photos, placeholder MP4 clips from `public/clips/` are used.
 

@@ -1,5 +1,27 @@
 import type { CSSProperties } from 'react'
 import { useMemorialCall } from '../context/MemorialCallContext'
+import {
+  backgroundPositionStyle,
+  transformOriginStyle,
+} from '../utils/focalPoint'
+
+function photoLayerStyle(
+  photoUrl: string | undefined,
+  focalX: number,
+  focalY: number,
+  opacity: number,
+  transition: string,
+): CSSProperties {
+  return {
+    opacity,
+    transition,
+    backgroundImage: photoUrl ? `url(${photoUrl})` : undefined,
+    backgroundPosition: backgroundPositionStyle({ focalX, focalY }),
+    transformOrigin: transformOriginStyle({ focalX, focalY }),
+    '--focal-x': `${focalX * 100}%`,
+    '--focal-y': `${focalY * 100}%`,
+  } as CSSProperties
+}
 
 export function DualMediaView() {
   const { mediaPlayback } = useMemorialCall()
@@ -9,8 +31,8 @@ export function DualMediaView() {
     secondaryRef,
     primaryOpacity,
     secondaryOpacity,
-    primaryPhotoUrl,
-    secondaryPhotoUrl,
+    primaryPhoto,
+    secondaryPhoto,
     primaryMotion,
     secondaryMotion,
     primaryMotionKey,
@@ -28,25 +50,27 @@ export function DualMediaView() {
     return (
       <div className="dual-video dual-media" style={kenBurnsStyle}>
         <div
-          key={`primary-${primaryPhotoUrl}-${primaryMotionKey}`}
+          key={`primary-${primaryPhoto.url}-${primaryMotionKey}`}
           className={`photo-layer motion-${primaryMotion}`}
-          style={{
-            opacity: primaryOpacity,
+          style={photoLayerStyle(
+            primaryPhoto.url,
+            primaryPhoto.focalX,
+            primaryPhoto.focalY,
+            primaryOpacity,
             transition,
-            backgroundImage: primaryPhotoUrl
-              ? `url(${primaryPhotoUrl})`
-              : undefined,
-          }}
+          )}
         />
-        {secondaryPhotoUrl && (
+        {secondaryPhoto?.url && (
           <div
-            key={`secondary-${secondaryPhotoUrl}-${secondaryMotionKey}`}
+            key={`secondary-${secondaryPhoto.url}-${secondaryMotionKey}`}
             className={`photo-layer motion-${secondaryMotion}`}
-            style={{
-              opacity: secondaryOpacity,
+            style={photoLayerStyle(
+              secondaryPhoto.url,
+              secondaryPhoto.focalX,
+              secondaryPhoto.focalY,
+              secondaryOpacity,
               transition,
-              backgroundImage: `url(${secondaryPhotoUrl})`,
-            }}
+            )}
           />
         )}
       </div>
