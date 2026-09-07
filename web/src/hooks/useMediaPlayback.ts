@@ -398,7 +398,13 @@ export function useMediaPlayback(
 /** Build photo sources from legacy url + optional focal arrays. */
 export function buildPhotoSources(
   photoUrls: string[],
-  photoFocalPoints?: Array<{ focalX: number; focalY: number; focalZoom?: number }>,
+  photoFocalPoints?: Array<{
+    focalX: number
+    focalY: number
+    focalZoom?: number
+    cropWidth?: number
+    cropHeight?: number
+  }>,
 ): PhotoSource[] {
   if (!photoFocalPoints || photoFocalPoints.length === 0) {
     return photoSourcesFromUrls(photoUrls)
@@ -411,6 +417,8 @@ export function buildPhotoSources(
       focalX: focal?.focalX ?? DEFAULT_FOCAL_X,
       focalY: focal?.focalY ?? DEFAULT_FOCAL_Y,
       focalZoom: focal?.focalZoom ?? DEFAULT_FOCAL_ZOOM,
+      cropWidth: focal?.cropWidth,
+      cropHeight: focal?.cropHeight,
     }
   })
 }

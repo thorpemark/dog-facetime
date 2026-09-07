@@ -887,6 +887,28 @@ button {
   line-height: 1.45;
 }
 
+.focal-editor-toolbar {
+  margin-bottom: 12px;
+}
+
+.focal-move-toggle {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.focal-move-toggle--active {
+  background: rgba(52, 199, 89, 0.22);
+  border-color: rgba(52, 199, 89, 0.65);
+  color: #fff;
+}
+
 .focal-editor-layout {
   display: flex;
   flex-direction: column;
@@ -901,10 +923,14 @@ button {
   overflow: hidden;
   background: #000;
   touch-action: none;
+  cursor: crosshair;
+}
+
+.focal-editor-canvas--move {
   cursor: grab;
 }
 
-.focal-editor-canvas:active {
+.focal-editor-canvas--move:active {
   cursor: grabbing;
 }
 
@@ -924,6 +950,169 @@ button {
   border-radius: 8px;
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.48);
   pointer-events: none;
+}
+
+.focal-crop-handle {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  border-radius: 50%;
+  background: rgba(52, 199, 89, 0.95);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+}
+
+.focal-crop-handle:active {
+  background: #fff;
+}
+
+.focal-crop-handle--nw {
+  left: 0;
+  top: 0;
+  cursor: nwse-resize;
+}
+
+.focal-crop-handle--n {
+  left: 50%;
+  top: 0;
+  cursor: ns-resize;
+}
+
+.focal-crop-handle--ne {
+  left: 100%;
+  top: 0;
+  cursor: nesw-resize;
+}
+
+.focal-crop-handle--e {
+  left: 100%;
+  top: 50%;
+  cursor: ew-resize;
+}
+
+.focal-crop-handle--se {
+  left: 100%;
+  top: 100%;
+  cursor: nwse-resize;
+}
+
+.focal-crop-handle--s {
+  left: 50%;
+  top: 100%;
+  cursor: ns-resize;
+}
+
+.focal-crop-handle--sw {
+  left: 0;
+  top: 100%;
+  cursor: nesw-resize;
+}
+
+.focal-crop-handle--w {
+  left: 0;
+  top: 50%;
+  cursor: ew-resize;
+}
+
+.focal-crosshair {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.focal-crosshair::before,
+.focal-crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(52, 199, 89, 0.95);
+  border-radius: 1px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.focal-crosshair::before {
+  left: 50%;
+  top: 2px;
+  width: 2px;
+  height: 18px;
+  transform: translateX(-50%);
+}
+
+.focal-crosshair::after {
+  top: 50%;
+  left: 2px;
+  width: 18px;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+.focal-nudge-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.focal-nudge-label {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+  min-width: 3.5rem;
+}
+
+.focal-nudge-pad {
+  display: grid;
+  grid-template-columns: 36px 36px 36px;
+  grid-template-rows: 32px 32px;
+  gap: 4px;
+}
+
+.focal-nudge-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.focal-nudge-btn:active {
+  background: rgba(52, 199, 89, 0.25);
+  border-color: rgba(52, 199, 89, 0.5);
+}
+
+.focal-nudge-btn--up {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.focal-nudge-btn--left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.focal-nudge-btn--right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.focal-nudge-btn--down {
+  grid-column: 2;
+  grid-row: 2;
 }
 
 .focal-preview-panel {
@@ -955,30 +1144,6 @@ button {
   display: block;
   user-select: none;
   -webkit-user-drag: none;
-}
-
-.focal-zoom-control {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 10px;
-  margin-top: 14px;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.65);
-}
-
-.focal-zoom-control input[type='range'] {
-  width: 100%;
-  accent-color: #34c759;
-  touch-action: pan-x;
-  cursor: pointer;
-}
-
-.focal-zoom-value {
-  min-width: 3.2rem;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  color: rgba(255, 255, 255, 0.85);
 }
 
 .focal-editor-actions {

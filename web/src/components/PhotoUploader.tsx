@@ -25,6 +25,8 @@ function hasCustomFocal(photo: MediaAsset): boolean {
     focalX: photo.focalX,
     focalY: photo.focalY,
     focalZoom: photo.focalZoom ?? DEFAULT_FOCAL_ZOOM,
+    cropWidth: photo.cropWidth,
+    cropHeight: photo.cropHeight,
   })
 }
 
@@ -131,6 +133,8 @@ export function PhotoUploader({
             focalX: editingPhoto.focalX ?? DEFAULT_FOCAL_X,
             focalY: editingPhoto.focalY ?? DEFAULT_FOCAL_Y,
             focalZoom: editingPhoto.focalZoom ?? DEFAULT_FOCAL_ZOOM,
+            cropWidth: editingPhoto.cropWidth,
+            cropHeight: editingPhoto.cropHeight,
           }}
           preferWideFrame={preferWideFrame}
           onSave={handleSaveFocal}

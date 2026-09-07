@@ -252,6 +252,8 @@ export function CreateMemorialView() {
                 focalX: updated.focalX,
                 focalY: updated.focalY,
                 focalZoom: updated.focalZoom,
+                cropWidth: updated.cropWidth,
+                cropHeight: updated.cropHeight,
               }
             : photo,
         ),

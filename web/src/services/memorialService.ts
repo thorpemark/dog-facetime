@@ -119,6 +119,8 @@ function mapRpcMedia(m: Record<string, unknown>): MediaAsset {
     m.focal_x ?? m.focalX,
     m.focal_y ?? m.focalY,
     m.focal_zoom ?? m.focalZoom,
+    m.focal_crop_w ?? m.focalCropW ?? m.cropWidth,
+    m.focal_crop_h ?? m.focalCropH ?? m.cropHeight,
   )
 
   return {
@@ -130,6 +132,8 @@ function mapRpcMedia(m: Record<string, unknown>): MediaAsset {
     focalX: focal.focalX,
     focalY: focal.focalY,
     focalZoom: focal.focalZoom,
+    cropWidth: focal.cropWidth,
+    cropHeight: focal.cropHeight,
   }
 }
 
@@ -473,6 +477,8 @@ export async function uploadPhoto(
     p_focal_x: focal?.focalX ?? DEFAULT_FOCAL_X,
     p_focal_y: focal?.focalY ?? DEFAULT_FOCAL_Y,
     p_focal_zoom: focal?.focalZoom ?? DEFAULT_FOCAL_ZOOM,
+    p_focal_crop_w: focal?.cropWidth ?? null,
+    p_focal_crop_h: focal?.cropHeight ?? null,
   })
   if (error) {
     await supabase.storage.from('memorial-photos').remove([storagePath])
@@ -515,6 +521,8 @@ function demoUpdateMediaFocalPoint(
       asset.focalX = focal.focalX
       asset.focalY = focal.focalY
       asset.focalZoom = focal.focalZoom
+      asset.cropWidth = focal.cropWidth
+      asset.cropHeight = focal.cropHeight
       writeDemoStore(store)
       return asset
     }
@@ -536,6 +544,8 @@ export async function updateMediaFocalPoint(
     p_focal_x: focal.focalX,
     p_focal_y: focal.focalY,
     p_focal_zoom: focal.focalZoom,
+    p_focal_crop_w: focal.cropWidth ?? null,
+    p_focal_crop_h: focal.cropHeight ?? null,
   })
   if (error) throw new Error(formatRpcError(error, 'Failed to save focus point'))
 
@@ -677,6 +687,8 @@ export function memorialToCallProfile(
     focalX: m.focalX,
     focalY: m.focalY,
     focalZoom: m.focalZoom,
+    cropWidth: m.cropWidth,
+    cropHeight: m.cropHeight,
   }))
 
   return {

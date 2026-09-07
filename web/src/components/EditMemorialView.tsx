@@ -136,12 +136,14 @@ export function EditMemorialView() {
           ...target,
           media: target.media.map((photo) =>
             photo.id === mediaId
-              ? {
-                  ...photo,
-                  focalX: updated.focalX,
-                  focalY: updated.focalY,
-                  focalZoom: updated.focalZoom,
-                }
+                ? {
+                    ...photo,
+                    focalX: updated.focalX,
+                    focalY: updated.focalY,
+                    focalZoom: updated.focalZoom,
+                    cropWidth: updated.cropWidth,
+                    cropHeight: updated.cropHeight,
+                  }
               : photo,
           ),
         })),
