@@ -4,8 +4,10 @@ import {
   DEFAULT_FOCAL_Y,
   DEFAULT_FOCAL_ZOOM,
   computeContainBounds,
+  canFitFullImage,
   defaultDualFramingForImage,
   defaultFocalFrameForImage,
+  fitFullImageFraming,
   focalFrameFromCenter,
   frameRectFromFocal,
   frameSizeFromFocal,
@@ -430,11 +432,16 @@ export function PhotoFocalEditor({
     }))
   }, [activeOrientation, imageAspect, preferWideFrame, viewportAspect])
 
+  const handleFitFullImage = useCallback(() => {
+    setActiveFocal(fitFullImageFraming(imageAspect, viewportAspect))
+  }, [imageAspect, setActiveFocal, viewportAspect])
+
   const frameRect =
     imageBounds
       ? frameRectFromFocal(focal, imageBounds, imageAspect, viewportAspect)
       : null
   const showWideHint = preferWideFrame || isLandscapeImage(imageAspect)
+  const showFitFullImage = canFitFullImage(focal, imageAspect, viewportAspect)
   const crosshairLeft = frameRect
     ? frameRect.left + frameRect.width / 2
     : 0
@@ -491,6 +498,16 @@ export function PhotoFocalEditor({
           >
             Move frame
           </button>
+          {showFitFullImage && (
+            <button
+              type="button"
+              className="btn-secondary focal-fit-full-btn"
+              onClick={handleFitFullImage}
+              disabled={saving}
+            >
+              Fit full image
+            </button>
+          )}
         </div>
 
         <div className="focal-editor-layout">

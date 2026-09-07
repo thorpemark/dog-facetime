@@ -696,7 +696,11 @@ export function hasStoredLandscapeFraming(
   )
 }
 
-/** Letterboxed viewport band on the call screen for a given viewport aspect. */
+/**
+ * Viewport band on the call screen for a given viewport aspect.
+ * Wider-than-viewport content gets vertical letterboxing; narrower content gets
+ * horizontal pillarboxing so portrait photos can fit on landscape calls.
+ */
 export function photoViewportBandStyle(
   focal: FocalFrame,
   imageAspect: number,
@@ -707,20 +711,66 @@ export function photoViewportBandStyle(
     imageAspect,
     viewportAspect,
   )
-  const bandHeightPct = Math.min(
-    100,
-    (viewportAspect / displayAspect) * 100,
-  )
-  const bandTopPct = (100 - bandHeightPct) / 2
+
+  if (displayAspect > viewportAspect) {
+    const bandHeightPct = (viewportAspect / displayAspect) * 100
+    const bandTopPct = (100 - bandHeightPct) / 2
+    return {
+      position: 'absolute',
+      left: 0,
+      width: '100%',
+      top: `${bandTopPct}%`,
+      height: `${bandHeightPct}%`,
+      overflow: 'hidden',
+    }
+  }
+
+  if (displayAspect < viewportAspect) {
+    const bandWidthPct = (displayAspect / viewportAspect) * 100
+    const bandLeftPct = (100 - bandWidthPct) / 2
+    return {
+      position: 'absolute',
+      left: `${bandLeftPct}%`,
+      width: `${bandWidthPct}%`,
+      top: 0,
+      height: '100%',
+      overflow: 'hidden',
+    }
+  }
 
   return {
     position: 'absolute',
     left: 0,
     width: '100%',
-    top: `${bandTopPct}%`,
-    height: `${bandHeightPct}%`,
+    top: 0,
+    height: '100%',
     overflow: 'hidden',
   }
+}
+
+/** Centered crop that includes the full source image (contain / pillarbox or letterbox). */
+export function fitFullImageFraming(
+  imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
+): FocalFrame {
+  return focalFrameFromCenter(
+    DEFAULT_FOCAL_X,
+    DEFAULT_FOCAL_Y,
+    1,
+    1,
+    imageAspect,
+    viewportAspect,
+  )
+}
+
+/** True when zooming out to the full image would change the visible framing. */
+export function canFitFullImage(
+  focal: FocalFrame,
+  imageAspect: number,
+  viewportAspect: number = PORTRAIT_CALL_ASPECT,
+): boolean {
+  const current = frameSizeFromFocal(focal, imageAspect, viewportAspect)
+  return current.width < 0.999 || current.height < 0.999
 }
 
 export function photoLayerCoverStyle(
