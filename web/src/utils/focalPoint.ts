@@ -3,6 +3,12 @@ import type { CSSProperties } from 'react'
 export const DEFAULT_FOCAL_X = 0.5
 export const DEFAULT_FOCAL_Y = 0.5
 export const DEFAULT_FOCAL_ZOOM = 1
+export const DEFAULT_FOCAL_ROTATION_DEG = 0
+
+/** Fine rotation range for straightening photos in the crop editor. */
+export const MIN_FOCAL_ROTATION_DEG = -15
+export const MAX_FOCAL_ROTATION_DEG = 15
+export const FOCAL_ROTATION_STEP = 0.5
 
 /** Portrait phone call viewport aspect (width / height). */
 export const PORTRAIT_CALL_ASPECT = 9 / 16
@@ -33,6 +39,8 @@ export interface FocalFrame extends FocalPoint {
   cropWidth?: number
   /** Normalized crop height as a fraction of image height (optional; overrides zoom-derived size). */
   cropHeight?: number
+  /** Fine rotation in degrees for straightening (default 0). */
+  focalRotationDeg?: number
 }
 
 export interface DualFraming {
@@ -110,6 +118,23 @@ export function normalizeCropDimension(value: unknown, fallback = MIN_CROP_DIMEN
   return Math.min(1, Math.max(MIN_CROP_DIMENSION, num))
 }
 
+export function normalizeFocalRotationDeg(
+  value: unknown,
+  fallback = DEFAULT_FOCAL_ROTATION_DEG,
+): number {
+  const num = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(num)) return fallback
+  return Math.min(
+    MAX_FOCAL_ROTATION_DEG,
+    Math.max(MIN_FOCAL_ROTATION_DEG, num),
+  )
+}
+
+export function focalRotationCssValue(rotationDeg?: number): string {
+  const deg = normalizeFocalRotationDeg(rotationDeg ?? DEFAULT_FOCAL_ROTATION_DEG)
+  return `${deg}deg`
+}
+
 export function hasExplicitCropSize(focal: FocalFrame): boolean {
   return focal.cropWidth != null && focal.cropHeight != null
 }
@@ -130,12 +155,14 @@ export function focalFrameFromValues(
   focalZoom?: unknown,
   cropWidth?: unknown,
   cropHeight?: unknown,
+  focalRotationDeg?: unknown,
 ): FocalFrame {
   const hasCrop =
     cropWidth != null &&
     cropHeight != null &&
     Number.isFinite(Number(cropWidth)) &&
     Number.isFinite(Number(cropHeight))
+  const rotation = normalizeFocalRotationDeg(focalRotationDeg)
 
   return {
     ...focalPointFromValues(focalX, focalY),
@@ -145,6 +172,9 @@ export function focalFrameFromValues(
           cropWidth: normalizeCropDimension(cropWidth),
           cropHeight: normalizeCropDimension(cropHeight),
         }
+      : {}),
+    ...(rotation !== DEFAULT_FOCAL_ROTATION_DEG
+      ? { focalRotationDeg: rotation }
       : {}),
   }
 }
@@ -427,10 +457,12 @@ export function focalFrameFromCenter(
   cropHeight: number,
   imageAspect: number,
   viewportAspect: number = PORTRAIT_CALL_ASPECT,
+  focalRotationDeg: number = DEFAULT_FOCAL_ROTATION_DEG,
 ): FocalFrame {
   const width = normalizeCropDimension(cropWidth)
   const height = normalizeCropDimension(cropHeight)
   const center = clampFocalCenter(focalX, focalY, width, height)
+  const rotation = normalizeFocalRotationDeg(focalRotationDeg)
   return {
     ...center,
     cropWidth: width,
@@ -441,6 +473,9 @@ export function focalFrameFromCenter(
       imageAspect,
       viewportAspect,
     ),
+    ...(rotation !== DEFAULT_FOCAL_ROTATION_DEG
+      ? { focalRotationDeg: rotation }
+      : {}),
   }
 }
 
@@ -460,6 +495,7 @@ export function nudgeFocalCenter(
     size.height,
     imageAspect,
     viewportAspect,
+    focal.focalRotationDeg ?? DEFAULT_FOCAL_ROTATION_DEG,
   )
 }
 
@@ -469,6 +505,7 @@ export function focalFrameFromCenterAndZoom(
   focalZoom: number,
   imageAspect: number,
   viewportAspect: number = PORTRAIT_CALL_ASPECT,
+  focalRotationDeg: number = DEFAULT_FOCAL_ROTATION_DEG,
 ): FocalFrame {
   const zoom = normalizeFocalZoom(focalZoom)
   const maxZoom = maxFocalZoom(imageAspect)
@@ -481,6 +518,7 @@ export function focalFrameFromCenterAndZoom(
     frame.height,
     imageAspect,
     viewportAspect,
+    focalRotationDeg,
   )
 }
 
@@ -534,6 +572,7 @@ export function focalFrameFromNormalizedRect(
   rect: FrameRect,
   imageAspect: number,
   viewportAspect: number = PORTRAIT_CALL_ASPECT,
+  focalRotationDeg: number = DEFAULT_FOCAL_ROTATION_DEG,
 ): FocalFrame {
   const clamped = clampCropRect(rect.left, rect.top, rect.width, rect.height)
   return focalFrameFromCenter(
@@ -543,6 +582,7 @@ export function focalFrameFromNormalizedRect(
     clamped.height,
     imageAspect,
     viewportAspect,
+    focalRotationDeg,
   )
 }
 
@@ -652,7 +692,8 @@ export function hasCustomFocalFrame(
     focal.focalY !== defaults.focalY ||
     focal.focalZoom !== defaults.focalZoom ||
     (focal.cropWidth != null && focal.cropWidth !== defaults.cropWidth) ||
-    (focal.cropHeight != null && focal.cropHeight !== defaults.cropHeight)
+    (focal.cropHeight != null && focal.cropHeight !== defaults.cropHeight) ||
+    normalizeFocalRotationDeg(focal.focalRotationDeg) !== DEFAULT_FOCAL_ROTATION_DEG
   )
 }
 
@@ -683,6 +724,7 @@ export function hasStoredLandscapeFraming(
   landscapeFocalZoom?: unknown,
   landscapeCropWidth?: unknown,
   landscapeCropHeight?: unknown,
+  landscapeFocalRotationDeg?: unknown,
 ): boolean {
   return (
     (landscapeFocalX != null &&
@@ -692,7 +734,10 @@ export function hasStoredLandscapeFraming(
     (landscapeFocalZoom != null &&
       normalizeFocalZoom(landscapeFocalZoom) !== DEFAULT_FOCAL_ZOOM) ||
     (landscapeCropWidth != null && Number.isFinite(Number(landscapeCropWidth))) ||
-    (landscapeCropHeight != null && Number.isFinite(Number(landscapeCropHeight)))
+    (landscapeCropHeight != null && Number.isFinite(Number(landscapeCropHeight))) ||
+    (landscapeFocalRotationDeg != null &&
+      normalizeFocalRotationDeg(landscapeFocalRotationDeg) !==
+        DEFAULT_FOCAL_ROTATION_DEG)
   )
 }
 
@@ -788,6 +833,7 @@ export function photoLayerMediaStyle(
   const frame = frameSizeFromFocal(focal, imageAspect)
   const invW = 1 / frame.width
   const invH = 1 / frame.height
+  const rotation = focalRotationCssValue(focal.focalRotationDeg)
 
   return {
     position: 'absolute',
@@ -799,5 +845,17 @@ export function photoLayerMediaStyle(
     transformOrigin: transformOriginStyle(focal),
     '--focal-x': `${focal.focalX * 100}%`,
     '--focal-y': `${focal.focalY * 100}%`,
+    '--focal-rotation': rotation,
   } as CSSProperties
+}
+
+export function editorImageRotationStyle(focal: FocalFrame): CSSProperties {
+  const rotation = focalRotationCssValue(focal.focalRotationDeg)
+  if (rotation === `${DEFAULT_FOCAL_ROTATION_DEG}deg`) {
+    return {}
+  }
+  return {
+    transform: `rotate(${rotation})`,
+    transformOrigin: transformOriginStyle(focal),
+  }
 }

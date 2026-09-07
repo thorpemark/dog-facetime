@@ -11,11 +11,13 @@ export interface DogProfile {
     focalZoom?: number
     cropWidth?: number
     cropHeight?: number
+    focalRotationDeg?: number
     landscapeFocalX?: number
     landscapeFocalY?: number
     landscapeFocalZoom?: number
     landscapeCropWidth?: number
     landscapeCropHeight?: number
+    landscapeFocalRotationDeg?: number
   }>
 }
 

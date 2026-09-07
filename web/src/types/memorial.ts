@@ -16,12 +16,15 @@ export interface MediaAsset {
   cropWidth?: number
   /** Normalized crop height (fraction of image height); optional legacy zoom fallback when absent. */
   cropHeight?: number
+  /** Fine rotation in degrees for portrait framing (default 0). */
+  focalRotationDeg?: number
   /** Landscape / desktop widescreen framing (nullable until saved). */
   landscapeFocalX?: number
   landscapeFocalY?: number
   landscapeFocalZoom?: number
   landscapeCropWidth?: number
   landscapeCropHeight?: number
+  landscapeFocalRotationDeg?: number
 }
 
 export interface CallTarget {
@@ -70,11 +73,13 @@ export interface CallSessionProfile {
     focalZoom?: number
     cropWidth?: number
     cropHeight?: number
+    focalRotationDeg?: number
     landscapeFocalX?: number
     landscapeFocalY?: number
     landscapeFocalZoom?: number
     landscapeCropWidth?: number
     landscapeCropHeight?: number
+    landscapeFocalRotationDeg?: number
   }>
   /** Future: per-reaction video clip URLs keyed by rule id */
   reactionMedia?: Record<string, string>
