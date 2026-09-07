@@ -10,6 +10,9 @@ export const PORTRAIT_CALL_ASPECT = 9 / 16
 export const MIN_FOCAL_ZOOM = 1
 export const MAX_FOCAL_ZOOM = 4
 
+/** Normalized step for arrow nudge controls in the focal editor. */
+export const FOCAL_NUDGE_STEP = 0.025
+
 export interface FocalPoint {
   focalX: number
   focalY: number
@@ -194,6 +197,21 @@ export function clampFocalCenter(
     focalX: normalizeFocal(Math.min(1 - halfW, Math.max(halfW, focalX))),
     focalY: normalizeFocal(Math.min(1 - halfH, Math.max(halfH, focalY))),
   }
+}
+
+export function nudgeFocalCenter(
+  focal: FocalFrame,
+  deltaX: number,
+  deltaY: number,
+  imageAspect: number,
+  step = FOCAL_NUDGE_STEP,
+): FocalFrame {
+  return focalFrameFromCenterAndZoom(
+    focal.focalX + deltaX * step,
+    focal.focalY + deltaY * step,
+    focal.focalZoom,
+    imageAspect,
+  )
 }
 
 export function focalFrameFromCenterAndZoom(

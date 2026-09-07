@@ -11,10 +11,13 @@ import {
   hasCustomFocalFrame,
   isLandscapeImage,
   maxFocalZoom,
+  nudgeFocalCenter,
   type FocalFrame,
   type ImageBounds,
 } from '../utils/focalPoint'
 import { FocalCallPreview } from './FocalCallPreview'
+
+const TAP_THRESHOLD_PX = 8
 
 interface PhotoFocalEditorProps {
   imageUrl: string
@@ -43,9 +46,12 @@ export function PhotoFocalEditor({
   )
   const [imageBounds, setImageBounds] = useState<ImageBounds | null>(null)
   const [imageAspect, setImageAspect] = useState(1)
+  const [moveFrameMode, setMoveFrameMode] = useState(true)
   const canvasRef = useRef<HTMLDivElement>(null)
   const isDraggingRef = useRef(false)
+  const didDragRef = useRef(false)
   const panOffsetRef = useRef({ x: 0, y: 0 })
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     setFocal(
@@ -95,6 +101,29 @@ export function PhotoFocalEditor({
     return () => window.removeEventListener('resize', refreshImageBounds)
   }, [imageUrl, refreshImageBounds])
 
+  const setFocalFromClient = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!imageBounds) return
+      const rect = canvasRef.current?.getBoundingClientRect()
+      if (!rect) return
+
+      const localX = clientX - rect.left
+      const localY = clientY - rect.top
+      const centerX = (localX - imageBounds.left) / imageBounds.width
+      const centerY = (localY - imageBounds.top) / imageBounds.height
+
+      setFocal((current) =>
+        focalFrameFromCenterAndZoom(
+          centerX,
+          centerY,
+          current.focalZoom,
+          imageAspect,
+        ),
+      )
+    },
+    [imageAspect, imageBounds],
+  )
+
   const updateFromPan = useCallback(
     (clientX: number, clientY: number) => {
       if (!imageBounds) return
@@ -120,51 +149,104 @@ export function PhotoFocalEditor({
     [imageAspect, imageBounds],
   )
 
-  const handlePointerDown = useCallback(
-    (event: React.PointerEvent) => {
-      if (!imageBounds || event.button !== 0) return
-
+  const isInsideImage = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!imageBounds) return false
       const rect = canvasRef.current?.getBoundingClientRect()
-      if (!rect) return
+      if (!rect) return false
 
-      const localX = event.clientX - rect.left
-      const localY = event.clientY - rect.top
-      const insideImage =
+      const localX = clientX - rect.left
+      const localY = clientY - rect.top
+      return (
         localX >= imageBounds.left &&
         localX <= imageBounds.left + imageBounds.width &&
         localY >= imageBounds.top &&
         localY <= imageBounds.top + imageBounds.height
+      )
+    },
+    [imageBounds],
+  )
 
-      if (!insideImage) return
+  const handlePointerDown = useCallback(
+    (event: React.PointerEvent) => {
+      if (!imageBounds || event.button !== 0) return
+      if (!isInsideImage(event.clientX, event.clientY)) return
 
       event.preventDefault()
       event.currentTarget.setPointerCapture(event.pointerId)
-      isDraggingRef.current = true
+      pointerStartRef.current = { x: event.clientX, y: event.clientY }
+      didDragRef.current = false
+      isDraggingRef.current = false
 
-      const frameRect = frameRectFromFocal(focal, imageBounds, imageAspect)
-      const frameCenterX = rect.left + frameRect.left + frameRect.width / 2
-      const frameCenterY = rect.top + frameRect.top + frameRect.height / 2
-      panOffsetRef.current = {
-        x: event.clientX - frameCenterX,
-        y: event.clientY - frameCenterY,
+      if (moveFrameMode) {
+        const rect = canvasRef.current?.getBoundingClientRect()
+        if (!rect) return
+
+        const frameRect = frameRectFromFocal(focal, imageBounds, imageAspect)
+        const frameCenterX = rect.left + frameRect.left + frameRect.width / 2
+        const frameCenterY = rect.top + frameRect.top + frameRect.height / 2
+        panOffsetRef.current = {
+          x: event.clientX - frameCenterX,
+          y: event.clientY - frameCenterY,
+        }
       }
-      updateFromPan(event.clientX, event.clientY)
     },
-    [focal, imageAspect, imageBounds, updateFromPan],
+    [focal, imageAspect, imageBounds, isInsideImage, moveFrameMode],
   )
 
   const handlePointerMove = useCallback(
     (event: React.PointerEvent) => {
-      if (!isDraggingRef.current) return
+      if (!pointerStartRef.current || !moveFrameMode) return
+
+      const dx = event.clientX - pointerStartRef.current.x
+      const dy = event.clientY - pointerStartRef.current.y
+      const distance = Math.hypot(dx, dy)
+
+      if (!didDragRef.current && distance < TAP_THRESHOLD_PX) return
+
       event.preventDefault()
+      didDragRef.current = true
+      isDraggingRef.current = true
       updateFromPan(event.clientX, event.clientY)
     },
-    [updateFromPan],
+    [moveFrameMode, updateFromPan],
   )
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = useCallback(
+    (event: React.PointerEvent) => {
+      if (!pointerStartRef.current) return
+
+      if (!didDragRef.current && isInsideImage(event.clientX, event.clientY)) {
+        setFocalFromClient(event.clientX, event.clientY)
+      }
+
+      pointerStartRef.current = null
+      isDraggingRef.current = false
+      didDragRef.current = false
+
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId)
+      }
+    },
+    [isInsideImage, setFocalFromClient],
+  )
+
+  const handlePointerCancel = useCallback((event: React.PointerEvent) => {
+    pointerStartRef.current = null
     isDraggingRef.current = false
+    didDragRef.current = false
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
   }, [])
+
+  const handleNudge = useCallback(
+    (deltaX: number, deltaY: number) => {
+      setFocal((current) => nudgeFocalCenter(current, deltaX, deltaY, imageAspect))
+    },
+    [imageAspect],
+  )
 
   const handleZoomChange = useCallback(
     (value: number) => {
@@ -188,6 +270,12 @@ export function PhotoFocalEditor({
     imageBounds ? frameRectFromFocal(focal, imageBounds, imageAspect) : null
   const maxZoom = maxFocalZoom(imageAspect)
   const showWideHint = preferWideFrame || isLandscapeImage(imageAspect)
+  const crosshairLeft = frameRect
+    ? frameRect.left + frameRect.width / 2
+    : 0
+  const crosshairTop = frameRect
+    ? frameRect.top + frameRect.height / 2
+    : 0
 
   return (
     <div className="focal-editor-backdrop" onClick={onClose}>
@@ -206,18 +294,31 @@ export function PhotoFocalEditor({
 
         <p className="focal-editor-lead">
           {showWideHint
-            ? 'Drag the frame to pan. Zoom out to widen the crop and letterbox for two-shots.'
-            : 'Drag the portrait frame to choose what fills the call screen. Zoom out to reveal more.'}
+            ? 'Turn on Move frame and drag to pan, or tap the photo to set focus. Use the arrows if drag is awkward. Zoom out to widen the crop for two-shots.'
+            : 'Turn on Move frame and drag to pan, or tap the photo to set focus. Use the arrows if drag is awkward. Zoom out to reveal more of the photo.'}
         </p>
+
+        <div className="focal-editor-toolbar">
+          <button
+            type="button"
+            className={`focal-move-toggle${moveFrameMode ? ' focal-move-toggle--active' : ''}`}
+            aria-pressed={moveFrameMode}
+            onClick={() => setMoveFrameMode((active) => !active)}
+          >
+            Move frame
+          </button>
+        </div>
 
         <div className="focal-editor-layout">
           <div
             ref={canvasRef}
-            className="focal-editor-canvas"
+            className={`focal-editor-canvas${moveFrameMode ? ' focal-editor-canvas--move' : ''}`}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            onDragStart={(event) => event.preventDefault()}
+            onContextMenu={(event) => event.preventDefault()}
           >
             <img
               src={imageUrl}
@@ -227,16 +328,26 @@ export function PhotoFocalEditor({
               onLoad={handleImageLoad}
             />
             {frameRect && (
-              <div
-                className="focal-crop-frame"
-                style={{
-                  left: `${frameRect.left}px`,
-                  top: `${frameRect.top}px`,
-                  width: `${frameRect.width}px`,
-                  height: `${frameRect.height}px`,
-                }}
-                aria-hidden="true"
-              />
+              <>
+                <div
+                  className="focal-crop-frame"
+                  style={{
+                    left: `${frameRect.left}px`,
+                    top: `${frameRect.top}px`,
+                    width: `${frameRect.width}px`,
+                    height: `${frameRect.height}px`,
+                  }}
+                  aria-hidden="true"
+                />
+                <div
+                  className="focal-crosshair"
+                  style={{
+                    left: `${crosshairLeft}px`,
+                    top: `${crosshairTop}px`,
+                  }}
+                  aria-hidden="true"
+                />
+              </>
             )}
           </div>
 
@@ -247,6 +358,49 @@ export function PhotoFocalEditor({
               focal={focal}
               imageAspect={imageAspect}
             />
+          </div>
+        </div>
+
+        <div
+          className="focal-nudge-controls"
+          role="group"
+          aria-label="Nudge frame position"
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <span className="focal-nudge-label">Nudge</span>
+          <div className="focal-nudge-pad">
+            <button
+              type="button"
+              className="focal-nudge-btn focal-nudge-btn--up"
+              aria-label="Nudge frame up"
+              onClick={() => handleNudge(0, -1)}
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              className="focal-nudge-btn focal-nudge-btn--left"
+              aria-label="Nudge frame left"
+              onClick={() => handleNudge(-1, 0)}
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              className="focal-nudge-btn focal-nudge-btn--right"
+              aria-label="Nudge frame right"
+              onClick={() => handleNudge(1, 0)}
+            >
+              →
+            </button>
+            <button
+              type="button"
+              className="focal-nudge-btn focal-nudge-btn--down"
+              aria-label="Nudge frame down"
+              onClick={() => handleNudge(0, 1)}
+            >
+              ↓
+            </button>
           </div>
         </div>
 
