@@ -10,6 +10,8 @@ export interface MediaAsset {
   focalX: number
   /** Normalized vertical focal point for portrait cover crop (0–1). */
   focalY: number
+  /** Zoom-out factor for portrait cover crop (1 = default cover). */
+  focalZoom: number
 }
 
 export interface CallTarget {
@@ -52,7 +54,7 @@ export interface CallSessionProfile {
   targetKind: CallTargetKind
   photoUrls: string[]
   /** Per-photo focal points aligned with photoUrls. */
-  photoFocalPoints?: Array<{ focalX: number; focalY: number }>
+  photoFocalPoints?: Array<{ focalX: number; focalY: number; focalZoom?: number }>
   /** Future: per-reaction video clip URLs keyed by rule id */
   reactionMedia?: Record<string, string>
 }

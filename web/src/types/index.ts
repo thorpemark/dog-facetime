@@ -5,7 +5,7 @@ export interface DogProfile {
   memorialTitle?: string
   targetKind?: 'dog_a' | 'dog_b' | 'together'
   photoUrls?: string[]
-  photoFocalPoints?: Array<{ focalX: number; focalY: number }>
+  photoFocalPoints?: Array<{ focalX: number; focalY: number; focalZoom?: number }>
 }
 
 export const DEFAULT_PROFILE: DogProfile = {

@@ -5,6 +5,7 @@ import { clipUrl } from '../utils/keywordRules'
 import {
   DEFAULT_FOCAL_X,
   DEFAULT_FOCAL_Y,
+  DEFAULT_FOCAL_ZOOM,
   type PhotoSource,
   photoSourcesFromUrls,
 } from '../utils/focalPoint'
@@ -28,6 +29,7 @@ function emptyPhotoSource(): PhotoSource {
     url: '',
     focalX: DEFAULT_FOCAL_X,
     focalY: DEFAULT_FOCAL_Y,
+    focalZoom: DEFAULT_FOCAL_ZOOM,
   }
 }
 
@@ -396,7 +398,7 @@ export function useMediaPlayback(
 /** Build photo sources from legacy url + optional focal arrays. */
 export function buildPhotoSources(
   photoUrls: string[],
-  photoFocalPoints?: Array<{ focalX: number; focalY: number }>,
+  photoFocalPoints?: Array<{ focalX: number; focalY: number; focalZoom?: number }>,
 ): PhotoSource[] {
   if (!photoFocalPoints || photoFocalPoints.length === 0) {
     return photoSourcesFromUrls(photoUrls)
@@ -408,6 +410,7 @@ export function buildPhotoSources(
       url,
       focalX: focal?.focalX ?? DEFAULT_FOCAL_X,
       focalY: focal?.focalY ?? DEFAULT_FOCAL_Y,
+      focalZoom: focal?.focalZoom ?? DEFAULT_FOCAL_ZOOM,
     }
   })
 }

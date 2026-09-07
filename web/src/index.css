@@ -27,6 +27,8 @@ body,
 #root {
   height: 100%;
   width: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
   overflow: hidden;
   background: #0d0d12;
   color: #fff;
@@ -48,6 +50,10 @@ button {
 .screen {
   position: fixed;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -294,6 +300,9 @@ button {
 .dual-video {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 .video-layer {
@@ -892,7 +901,11 @@ button {
   overflow: hidden;
   background: #000;
   touch-action: none;
-  cursor: crosshair;
+  cursor: grab;
+}
+
+.focal-editor-canvas:active {
+  cursor: grabbing;
 }
 
 .focal-editor-canvas img {
@@ -904,41 +917,12 @@ button {
   user-select: none;
 }
 
-.focal-image-frame {
+.focal-crop-frame {
   position: absolute;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.48);
   pointer-events: none;
-}
-
-.focal-crosshair {
-  position: absolute;
-  width: 28px;
-  height: 28px;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-
-.focal-crosshair::before,
-.focal-crosshair::after {
-  content: '';
-  position: absolute;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
-}
-
-.focal-crosshair::before {
-  left: 50%;
-  top: 4px;
-  width: 2px;
-  height: 20px;
-  transform: translateX(-50%);
-}
-
-.focal-crosshair::after {
-  top: 50%;
-  left: 4px;
-  width: 20px;
-  height: 2px;
-  transform: translateY(-50%);
 }
 
 .focal-preview-panel {
@@ -956,13 +940,47 @@ button {
 }
 
 .focal-preview-frame {
+  position: relative;
   width: 120px;
   height: 213px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  background-size: cover;
-  background-repeat: no-repeat;
+  overflow: hidden;
+  background: #000;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.focal-preview-cover {
+  position: absolute;
+  overflow: hidden;
+}
+
+.focal-preview-cover img {
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.focal-zoom-control {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.focal-zoom-control input[type='range'] {
+  width: 100%;
+  accent-color: #34c759;
+}
+
+.focal-zoom-value {
+  min-width: 3.2rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .focal-editor-actions {
@@ -1070,26 +1088,41 @@ button {
 .photo-layer {
   position: absolute;
   inset: 0;
-  background-size: cover;
-  background-repeat: no-repeat;
-  transform-origin: var(--focal-x, 50%) var(--focal-y, 50%);
-  will-change: transform, opacity;
+  overflow: hidden;
+  pointer-events: none;
 }
 
-.photo-layer.motion-idle {
+.photo-layer-cover {
+  position: absolute;
+  overflow: hidden;
+}
+
+.photo-layer-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transform-origin: var(--focal-x, 50%) var(--focal-y, 50%);
+  will-change: transform, opacity;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.photo-layer-media.motion-idle {
   animation: ken-burns-idle var(--ken-burns-idle-duration, 12s) ease-in-out infinite
     alternate;
 }
 
-.photo-layer.motion-perk {
+.photo-layer-media.motion-perk {
   animation: ken-burns-perk 2.2s ease-out forwards;
 }
 
-.photo-layer.motion-excited {
+.photo-layer-media.motion-excited {
   animation: ken-burns-excited 2.2s ease-out forwards;
 }
 
-.photo-layer.motion-calm {
+.photo-layer-media.motion-calm {
   animation: ken-burns-calm 2.2s ease-out forwards;
 }
 

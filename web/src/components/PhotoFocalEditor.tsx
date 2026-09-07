@@ -2,69 +2,28 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   DEFAULT_FOCAL_X,
   DEFAULT_FOCAL_Y,
-  type FocalPoint,
-  normalizeFocal,
+  DEFAULT_FOCAL_ZOOM,
+  computeContainBounds,
+  defaultFocalFrameForImage,
+  focalFrameFromCenterAndZoom,
+  focalFrameFromValues,
+  frameRectFromFocal,
+  hasCustomFocalFrame,
+  isLandscapeImage,
+  maxFocalZoom,
+  type FocalFrame,
+  type ImageBounds,
 } from '../utils/focalPoint'
+import { FocalCallPreview } from './FocalCallPreview'
 
 interface PhotoFocalEditorProps {
   imageUrl: string
-  initialFocal?: FocalPoint
-  onSave: (focal: FocalPoint) => void | Promise<void>
+  initialFocal?: FocalFrame
+  onSave: (focal: FocalFrame) => void | Promise<void>
   onClose: () => void
   saving?: boolean
-}
-
-interface ImageBounds {
-  left: number
-  top: number
-  width: number
-  height: number
-}
-
-function computeContainBounds(
-  containerWidth: number,
-  containerHeight: number,
-  imageWidth: number,
-  imageHeight: number,
-): ImageBounds {
-  const containerRatio = containerWidth / containerHeight
-  const imageRatio = imageWidth / imageHeight
-
-  if (imageRatio > containerRatio) {
-    const width = containerWidth
-    const height = containerWidth / imageRatio
-    return {
-      left: 0,
-      top: (containerHeight - height) / 2,
-      width,
-      height,
-    }
-  }
-
-  const height = containerHeight
-  const width = containerHeight * imageRatio
-  return {
-    left: (containerWidth - width) / 2,
-    top: 0,
-    width,
-    height,
-  }
-}
-
-function pointerToFocal(
-  clientX: number,
-  clientY: number,
-  rect: DOMRect,
-  bounds: ImageBounds,
-): FocalPoint {
-  const localX = clientX - rect.left - bounds.left
-  const localY = clientY - rect.top - bounds.top
-  const x = localX / bounds.width
-  const y = localY / bounds.height
-  return {
-    focalX: normalizeFocal(x),
-    focalY: normalizeFocal(y),
-  }
+  /** Hint wider default framing for together / group shots. */
+  preferWideFrame?: boolean
 }
 
 export function PhotoFocalEditor({
@@ -73,16 +32,29 @@ export function PhotoFocalEditor({
   onSave,
   onClose,
   saving = false,
+  preferWideFrame = false,
 }: PhotoFocalEditorProps) {
-  const [focal, setFocal] = useState<FocalPoint>(
-    initialFocal ?? { focalX: DEFAULT_FOCAL_X, focalY: DEFAULT_FOCAL_Y },
+  const [focal, setFocal] = useState<FocalFrame>(
+    initialFocal ?? {
+      focalX: DEFAULT_FOCAL_X,
+      focalY: DEFAULT_FOCAL_Y,
+      focalZoom: DEFAULT_FOCAL_ZOOM,
+    },
   )
   const [imageBounds, setImageBounds] = useState<ImageBounds | null>(null)
+  const [imageAspect, setImageAspect] = useState(1)
   const canvasRef = useRef<HTMLDivElement>(null)
-  const draggingRef = useRef(false)
+  const isDraggingRef = useRef(false)
+  const panOffsetRef = useRef({ x: 0, y: 0 })
 
   useEffect(() => {
-    setFocal(initialFocal ?? { focalX: DEFAULT_FOCAL_X, focalY: DEFAULT_FOCAL_Y })
+    setFocal(
+      initialFocal ?? {
+        focalX: DEFAULT_FOCAL_X,
+        focalY: DEFAULT_FOCAL_Y,
+        focalZoom: DEFAULT_FOCAL_ZOOM,
+      },
+    )
   }, [imageUrl, initialFocal])
 
   const refreshImageBounds = useCallback(() => {
@@ -103,45 +75,108 @@ export function PhotoFocalEditor({
     )
   }, [])
 
+  const handleImageLoad = useCallback(
+    (event: React.SyntheticEvent<HTMLImageElement>) => {
+      const image = event.currentTarget
+      const aspect = image.naturalWidth / image.naturalHeight
+      setImageAspect(aspect)
+      refreshImageBounds()
+
+      if (!initialFocal || !hasCustomFocalFrame(initialFocal)) {
+        setFocal(defaultFocalFrameForImage(aspect, preferWideFrame))
+      }
+    },
+    [initialFocal, preferWideFrame, refreshImageBounds],
+  )
+
   useEffect(() => {
     refreshImageBounds()
     window.addEventListener('resize', refreshImageBounds)
     return () => window.removeEventListener('resize', refreshImageBounds)
   }, [imageUrl, refreshImageBounds])
 
-  const updateFromPointer = useCallback(
+  const updateFromPan = useCallback(
     (clientX: number, clientY: number) => {
+      if (!imageBounds) return
       const rect = canvasRef.current?.getBoundingClientRect()
-      if (!rect || !imageBounds || imageBounds.width === 0 || imageBounds.height === 0) {
-        return
-      }
-      setFocal(pointerToFocal(clientX, clientY, rect, imageBounds))
+      if (!rect) return
+
+      const centerX =
+        (clientX - rect.left - imageBounds.left - panOffsetRef.current.x) /
+        imageBounds.width
+      const centerY =
+        (clientY - rect.top - imageBounds.top - panOffsetRef.current.y) /
+        imageBounds.height
+
+      setFocal((current) =>
+        focalFrameFromCenterAndZoom(
+          centerX,
+          centerY,
+          current.focalZoom,
+          imageAspect,
+        ),
+      )
     },
-    [imageBounds],
+    [imageAspect, imageBounds],
   )
 
   const handlePointerDown = useCallback(
     (event: React.PointerEvent) => {
-      draggingRef.current = true
+      if (!imageBounds) return
+      const frameRect = frameRectFromFocal(focal, imageBounds, imageAspect)
+      const insideFrame =
+        event.clientX >= frameRect.left &&
+        event.clientX <= frameRect.left + frameRect.width &&
+        event.clientY >= frameRect.top &&
+        event.clientY <= frameRect.top + frameRect.height
+
+      if (!insideFrame) return
+
       event.currentTarget.setPointerCapture(event.pointerId)
-      updateFromPointer(event.clientX, event.clientY)
+      isDraggingRef.current = true
+      panOffsetRef.current = {
+        x: event.clientX - (frameRect.left + frameRect.width / 2),
+        y: event.clientY - (frameRect.top + frameRect.height / 2),
+      }
+      updateFromPan(event.clientX, event.clientY)
     },
-    [updateFromPointer],
+    [focal, imageAspect, imageBounds, updateFromPan],
   )
 
   const handlePointerMove = useCallback(
     (event: React.PointerEvent) => {
-      if (!draggingRef.current) return
-      updateFromPointer(event.clientX, event.clientY)
+      if (!isDraggingRef.current) return
+      updateFromPan(event.clientX, event.clientY)
     },
-    [updateFromPointer],
+    [updateFromPan],
   )
 
   const handlePointerUp = useCallback(() => {
-    draggingRef.current = false
+    isDraggingRef.current = false
   }, [])
 
-  const positionStyle = `${focal.focalX * 100}% ${focal.focalY * 100}%`
+  const handleZoomChange = useCallback(
+    (value: number) => {
+      setFocal((current) =>
+        focalFrameFromCenterAndZoom(
+          current.focalX,
+          current.focalY,
+          value,
+          imageAspect,
+        ),
+      )
+    },
+    [imageAspect],
+  )
+
+  const handleReset = useCallback(() => {
+    setFocal(defaultFocalFrameForImage(imageAspect, false))
+  }, [imageAspect])
+
+  const frameRect =
+    imageBounds ? frameRectFromFocal(focal, imageBounds, imageAspect) : null
+  const maxZoom = maxFocalZoom(imageAspect)
+  const showWideHint = preferWideFrame || isLandscapeImage(imageAspect)
 
   return (
     <div className="focal-editor-backdrop" onClick={onClose}>
@@ -152,14 +187,16 @@ export function PhotoFocalEditor({
         onClick={(event) => event.stopPropagation()}
       >
         <header className="focal-editor-header">
-          <h2 id="focal-editor-title">Set focus point</h2>
+          <h2 id="focal-editor-title">Frame portrait crop</h2>
           <button type="button" className="focal-editor-close" onClick={onClose}>
             ✕
           </button>
         </header>
 
         <p className="focal-editor-lead">
-          Tap or drag on the photo to choose what stays centered in portrait calls.
+          {showWideHint
+            ? 'Drag the portrait frame to include everyone. Use zoom to pull back for two-shots.'
+            : 'Drag the portrait frame to choose what fills the call screen.'}
         </p>
 
         <div className="focal-editor-layout">
@@ -175,41 +212,41 @@ export function PhotoFocalEditor({
               src={imageUrl}
               alt=""
               draggable={false}
-              onLoad={refreshImageBounds}
+              onLoad={handleImageLoad}
             />
-            {imageBounds && (
+            {frameRect && (
               <div
-                className="focal-image-frame"
+                className="focal-crop-frame"
                 style={{
-                  left: `${imageBounds.left}px`,
-                  top: `${imageBounds.top}px`,
-                  width: `${imageBounds.width}px`,
-                  height: `${imageBounds.height}px`,
+                  left: `${frameRect.left}px`,
+                  top: `${frameRect.top}px`,
+                  width: `${frameRect.width}px`,
+                  height: `${frameRect.height}px`,
                 }}
-              >
-                <div
-                  className="focal-crosshair"
-                  style={{
-                    left: `${focal.focalX * 100}%`,
-                    top: `${focal.focalY * 100}%`,
-                  }}
-                  aria-hidden="true"
-                />
-              </div>
+                aria-hidden="true"
+              />
             )}
           </div>
 
           <div className="focal-preview-panel">
             <p className="focal-preview-label">Call preview</p>
-            <div
-              className="focal-preview-frame"
-              style={{
-                backgroundImage: `url(${imageUrl})`,
-                backgroundPosition: positionStyle,
-              }}
-            />
+            <FocalCallPreview imageUrl={imageUrl} focal={focal} />
           </div>
         </div>
+
+        <label className="focal-zoom-control">
+          <span>Zoom out</span>
+          <input
+            type="range"
+            min={DEFAULT_FOCAL_ZOOM}
+            max={maxZoom}
+            step={0.01}
+            value={focal.focalZoom}
+            onChange={(event) => handleZoomChange(Number(event.target.value))}
+            aria-label="Zoom out to include more of the photo"
+          />
+          <span className="focal-zoom-value">{focal.focalZoom.toFixed(2)}×</span>
+        </label>
 
         <div className="focal-editor-actions">
           <button type="button" className="btn-text" onClick={onClose} disabled={saving}>
@@ -218,20 +255,22 @@ export function PhotoFocalEditor({
           <button
             type="button"
             className="btn-secondary"
-            onClick={() =>
-              setFocal({ focalX: DEFAULT_FOCAL_X, focalY: DEFAULT_FOCAL_Y })
-            }
+            onClick={handleReset}
             disabled={saving}
           >
-            Reset center
+            Reset frame
           </button>
           <button
             type="button"
             className="btn-call focal-save-btn"
             disabled={saving}
-            onClick={() => void onSave(focal)}
+            onClick={() =>
+              void onSave(
+                focalFrameFromValues(focal.focalX, focal.focalY, focal.focalZoom),
+              )
+            }
           >
-            {saving ? 'Saving…' : 'Save focus'}
+            {saving ? 'Saving…' : 'Save frame'}
           </button>
         </div>
       </div>

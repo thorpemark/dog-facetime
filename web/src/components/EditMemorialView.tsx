@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { CallTarget, Memorial } from '../types/memorial'
-import type { FocalPoint } from '../utils/focalPoint'
+import type { FocalFrame } from '../utils/focalPoint'
 import {
   deleteCallTarget,
   deletePhoto,
@@ -124,7 +124,7 @@ export function EditMemorialView() {
     }
   }
 
-  const handleFocalChange = async (mediaId: string, focal: FocalPoint) => {
+  const handleFocalChange = async (mediaId: string, focal: FocalFrame) => {
     if (!editToken || !memorial) return
     setSaving(true)
     setError(null)
@@ -140,6 +140,7 @@ export function EditMemorialView() {
                   ...photo,
                   focalX: updated.focalX,
                   focalY: updated.focalY,
+                  focalZoom: updated.focalZoom,
                 }
               : photo,
           ),
@@ -301,6 +302,7 @@ export function EditMemorialView() {
                 void handleDeletePhoto(mediaId, photo?.storagePath)
               }}
               onFocalChange={(mediaId, focal) => void handleFocalChange(mediaId, focal)}
+              preferWideFrame={target.kind === 'together'}
               disabled={saving}
             />
           </div>

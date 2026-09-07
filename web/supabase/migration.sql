@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS media_assets (
   sort_order      INT NOT NULL DEFAULT 0,
   focal_x         REAL NOT NULL DEFAULT 0.5 CHECK (focal_x >= 0 AND focal_x <= 1),
   focal_y         REAL NOT NULL DEFAULT 0.5 CHECK (focal_y >= 0 AND focal_y <= 1),
+  focal_zoom      REAL NOT NULL DEFAULT 1 CHECK (focal_zoom >= 1 AND focal_zoom <= 4),
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -228,7 +229,8 @@ BEGIN
             'reaction_tag', ma.reaction_tag,
             'sort_order', ma.sort_order,
             'focal_x', ma.focal_x,
-            'focal_y', ma.focal_y
+            'focal_y', ma.focal_y,
+            'focal_zoom', ma.focal_zoom
           ) ORDER BY ma.sort_order, ma.created_at
         ), '[]'::json)
         FROM media_assets ma
@@ -283,7 +285,8 @@ BEGIN
             'reaction_tag', ma.reaction_tag,
             'sort_order', ma.sort_order,
             'focal_x', ma.focal_x,
-            'focal_y', ma.focal_y
+            'focal_y', ma.focal_y,
+            'focal_zoom', ma.focal_zoom
           ) ORDER BY ma.sort_order, ma.created_at
         ), '[]'::json)
         FROM media_assets ma
@@ -391,7 +394,8 @@ CREATE OR REPLACE FUNCTION register_media_asset(
   p_sort_order INT DEFAULT 0,
   p_reaction_tag TEXT DEFAULT NULL,
   p_focal_x REAL DEFAULT 0.5,
-  p_focal_y REAL DEFAULT 0.5
+  p_focal_y REAL DEFAULT 0.5,
+  p_focal_zoom REAL DEFAULT 1
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -422,7 +426,8 @@ BEGIN
     sort_order,
     reaction_tag,
     focal_x,
-    focal_y
+    focal_y,
+    focal_zoom
   )
   VALUES (
     p_target_id,
@@ -431,7 +436,8 @@ BEGIN
     p_sort_order,
     p_reaction_tag,
     LEAST(1, GREATEST(0, COALESCE(p_focal_x, 0.5))),
-    LEAST(1, GREATEST(0, COALESCE(p_focal_y, 0.5)))
+    LEAST(1, GREATEST(0, COALESCE(p_focal_y, 0.5))),
+    LEAST(4, GREATEST(1, COALESCE(p_focal_zoom, 1)))
   )
   RETURNING * INTO v_asset;
 
@@ -442,7 +448,8 @@ BEGIN
     'sort_order', v_asset.sort_order,
     'reaction_tag', v_asset.reaction_tag,
     'focal_x', v_asset.focal_x,
-    'focal_y', v_asset.focal_y
+    'focal_y', v_asset.focal_y,
+    'focal_zoom', v_asset.focal_zoom
   );
 END;
 $$;
@@ -453,7 +460,8 @@ CREATE OR REPLACE FUNCTION update_media_focal_point(
   p_edit_token TEXT,
   p_media_id UUID,
   p_focal_x REAL DEFAULT 0.5,
-  p_focal_y REAL DEFAULT 0.5
+  p_focal_y REAL DEFAULT 0.5,
+  p_focal_zoom REAL DEFAULT 1
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -466,7 +474,8 @@ BEGIN
   UPDATE media_assets ma
   SET
     focal_x = LEAST(1, GREATEST(0, COALESCE(p_focal_x, 0.5))),
-    focal_y = LEAST(1, GREATEST(0, COALESCE(p_focal_y, 0.5)))
+    focal_y = LEAST(1, GREATEST(0, COALESCE(p_focal_y, 0.5))),
+    focal_zoom = LEAST(4, GREATEST(1, COALESCE(p_focal_zoom, 1)))
   FROM call_targets ct
   JOIN memorials m ON m.id = ct.memorial_id
   WHERE ma.id = p_media_id
@@ -485,7 +494,8 @@ BEGIN
     'sort_order', v_asset.sort_order,
     'reaction_tag', v_asset.reaction_tag,
     'focal_x', v_asset.focal_x,
-    'focal_y', v_asset.focal_y
+    'focal_y', v_asset.focal_y,
+    'focal_zoom', v_asset.focal_zoom
   );
 END;
 $$;
@@ -588,8 +598,8 @@ GRANT EXECUTE ON FUNCTION get_memorial_public(TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION get_memorial_for_edit(TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION update_memorial(TEXT, TEXT, TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION upsert_call_target(TEXT, TEXT, TEXT, INT) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION register_media_asset(TEXT, UUID, TEXT, TEXT, INT, TEXT, REAL, REAL) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION update_media_focal_point(TEXT, UUID, REAL, REAL) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION register_media_asset(TEXT, UUID, TEXT, TEXT, INT, TEXT, REAL, REAL, REAL) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION update_media_focal_point(TEXT, UUID, REAL, REAL, REAL) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION delete_media_asset(TEXT, UUID) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION regenerate_share_id(TEXT) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION delete_call_target(TEXT, UUID) TO anon, authenticated;

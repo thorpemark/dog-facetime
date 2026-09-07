@@ -1,6 +1,12 @@
 import { useRef, useState } from 'react'
 import type { MediaAsset } from '../types/memorial'
-import { DEFAULT_FOCAL_X, DEFAULT_FOCAL_Y, type FocalPoint } from '../utils/focalPoint'
+import {
+  DEFAULT_FOCAL_X,
+  DEFAULT_FOCAL_Y,
+  DEFAULT_FOCAL_ZOOM,
+  hasCustomFocalFrame,
+  type FocalFrame,
+} from '../utils/focalPoint'
 import { PhotoFocalEditor } from './PhotoFocalEditor'
 
 interface PhotoUploaderProps {
@@ -8,12 +14,18 @@ interface PhotoUploaderProps {
   /** Receives a snapshot of selected files (not a live FileList). */
   onUpload: (files: File[]) => void | Promise<void>
   onDelete: (mediaId: string) => void
-  onFocalChange?: (mediaId: string, focal: FocalPoint) => void | Promise<void>
+  onFocalChange?: (mediaId: string, focal: FocalFrame) => void | Promise<void>
   disabled?: boolean
+  /** Wider default framing for together / group shots. */
+  preferWideFrame?: boolean
 }
 
 function hasCustomFocal(photo: MediaAsset): boolean {
-  return photo.focalX !== DEFAULT_FOCAL_X || photo.focalY !== DEFAULT_FOCAL_Y
+  return hasCustomFocalFrame({
+    focalX: photo.focalX,
+    focalY: photo.focalY,
+    focalZoom: photo.focalZoom ?? DEFAULT_FOCAL_ZOOM,
+  })
 }
 
 export function PhotoUploader({
@@ -22,12 +34,13 @@ export function PhotoUploader({
   onDelete,
   onFocalChange,
   disabled,
+  preferWideFrame = false,
 }: PhotoUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [editingPhoto, setEditingPhoto] = useState<MediaAsset | null>(null)
   const [savingFocal, setSavingFocal] = useState(false)
 
-  const handleSaveFocal = async (focal: FocalPoint) => {
+  const handleSaveFocal = async (focal: FocalFrame) => {
     if (!editingPhoto || !onFocalChange) return
     setSavingFocal(true)
     try {
@@ -50,8 +63,8 @@ export function PhotoUploader({
               disabled={disabled || !onFocalChange || photo.id.startsWith('pending-')}
               aria-label={
                 hasCustomFocal(photo)
-                  ? 'Edit focus point (custom)'
-                  : 'Set focus point'
+                  ? 'Edit portrait frame (custom)'
+                  : 'Set portrait frame'
               }
             >
               <img src={photo.publicUrl} alt="" />
@@ -105,7 +118,9 @@ export function PhotoUploader({
       )}
       {onFocalChange && photos.length > 0 && (
         <p className="photo-hint">
-          Tap a photo to set where the face stays centered on portrait calls.
+          {preferWideFrame
+            ? 'Tap a photo to drag the portrait frame and include both dogs on calls.'
+            : 'Tap a photo to drag the portrait frame shown on calls.'}
         </p>
       )}
 
@@ -115,7 +130,9 @@ export function PhotoUploader({
           initialFocal={{
             focalX: editingPhoto.focalX ?? DEFAULT_FOCAL_X,
             focalY: editingPhoto.focalY ?? DEFAULT_FOCAL_Y,
+            focalZoom: editingPhoto.focalZoom ?? DEFAULT_FOCAL_ZOOM,
           }}
+          preferWideFrame={preferWideFrame}
           onSave={handleSaveFocal}
           onClose={() => setEditingPhoto(null)}
           saving={savingFocal}

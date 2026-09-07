@@ -15,8 +15,9 @@ import type {
 import {
   DEFAULT_FOCAL_X,
   DEFAULT_FOCAL_Y,
-  type FocalPoint,
-  focalPointFromValues,
+  DEFAULT_FOCAL_ZOOM,
+  type FocalFrame,
+  focalFrameFromValues,
 } from '../utils/focalPoint'
 
 const DEMO_STORE_KEY = 'memorial-call-demo-store'
@@ -114,7 +115,11 @@ function mapRpcMedia(m: Record<string, unknown>): MediaAsset {
     storagePath && !storagePath.startsWith('demo/')
       ? memorialPhotoPublicUrl(storagePath)
       : (storedUrl ?? '')
-  const focal = focalPointFromValues(m.focal_x ?? m.focalX, m.focal_y ?? m.focalY)
+  const focal = focalFrameFromValues(
+    m.focal_x ?? m.focalX,
+    m.focal_y ?? m.focalY,
+    m.focal_zoom ?? m.focalZoom,
+  )
 
   return {
     id: String(m.id ?? ''),
@@ -124,6 +129,7 @@ function mapRpcMedia(m: Record<string, unknown>): MediaAsset {
     sortOrder: Number(m.sort_order ?? m.sortOrder ?? 0),
     focalX: focal.focalX,
     focalY: focal.focalY,
+    focalZoom: focal.focalZoom,
   }
 }
 
@@ -263,6 +269,7 @@ async function demoAddPhoto(
     sortOrder,
     focalX: DEFAULT_FOCAL_X,
     focalY: DEFAULT_FOCAL_Y,
+    focalZoom: DEFAULT_FOCAL_ZOOM,
   }
   callTarget.media.push(asset)
   callTarget.media.sort((a, b) => a.sortOrder - b.sortOrder)
@@ -420,7 +427,7 @@ export async function uploadPhoto(
   target: UploadPhotoTarget,
   file: File,
   mediaSortOrder: number,
-  focal?: FocalPoint,
+  focal?: FocalFrame,
 ): Promise<PhotoUploadResult> {
   if (isDemoMode()) return demoAddPhoto(editToken, target, file, mediaSortOrder)
 
@@ -465,6 +472,7 @@ export async function uploadPhoto(
     p_reaction_tag: null,
     p_focal_x: focal?.focalX ?? DEFAULT_FOCAL_X,
     p_focal_y: focal?.focalY ?? DEFAULT_FOCAL_Y,
+    p_focal_zoom: focal?.focalZoom ?? DEFAULT_FOCAL_ZOOM,
   })
   if (error) {
     await supabase.storage.from('memorial-photos').remove([storagePath])
@@ -495,7 +503,7 @@ export async function uploadPhoto(
 function demoUpdateMediaFocalPoint(
   editToken: string,
   mediaId: string,
-  focal: FocalPoint,
+  focal: FocalFrame,
 ): MediaAsset {
   const store = readDemoStore()
   const memorial = store.memorials.find((m) => m.editToken === editToken)
@@ -506,6 +514,7 @@ function demoUpdateMediaFocalPoint(
     if (asset) {
       asset.focalX = focal.focalX
       asset.focalY = focal.focalY
+      asset.focalZoom = focal.focalZoom
       writeDemoStore(store)
       return asset
     }
@@ -516,7 +525,7 @@ function demoUpdateMediaFocalPoint(
 export async function updateMediaFocalPoint(
   editToken: string,
   mediaId: string,
-  focal: FocalPoint,
+  focal: FocalFrame,
 ): Promise<MediaAsset> {
   if (isDemoMode()) return demoUpdateMediaFocalPoint(editToken, mediaId, focal)
 
@@ -526,6 +535,7 @@ export async function updateMediaFocalPoint(
     p_media_id: mediaId,
     p_focal_x: focal.focalX,
     p_focal_y: focal.focalY,
+    p_focal_zoom: focal.focalZoom,
   })
   if (error) throw new Error(formatRpcError(error, 'Failed to save focus point'))
 
@@ -666,6 +676,7 @@ export function memorialToCallProfile(
   const photoFocalPoints = sortedMedia.map((m) => ({
     focalX: m.focalX,
     focalY: m.focalY,
+    focalZoom: m.focalZoom,
   }))
 
   return {
