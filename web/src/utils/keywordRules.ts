@@ -1,4 +1,8 @@
 import type { KeywordRule, KeywordRulesConfig } from '../types'
+import {
+  pickRandomClipForBucket,
+  type ReactionBucket,
+} from '../data/reactionCatalog'
 
 export function resolvePhrases(
   rule: KeywordRule,
@@ -49,5 +53,29 @@ export async function loadKeywordRules(): Promise<KeywordRulesConfig> {
 }
 
 export function clipUrl(fileName: string): string {
-  return `${import.meta.env.BASE_URL}clips/${fileName}`
+  const path = fileName.startsWith('clips/') ? fileName : `clips/${fileName}`
+  return `${import.meta.env.BASE_URL}${path}`
+}
+
+/**
+ * Resolve a reaction clip URL for a matched bucket id.
+ * TODO (clips fork): call from playVideoReaction instead of rule.clipFileName.
+ * Picks randomly among prerendered variants in reactionCatalog.ts.
+ */
+export function reactionClipUrlForBucket(bucketId: string): string | undefined {
+  const path = pickRandomClipForBucket(bucketId)
+  return path ? clipUrl(path) : undefined
+}
+
+/** Map catalog bucket to legacy KeywordRule shape for spotter compatibility. */
+export function bucketToKeywordRule(bucket: ReactionBucket): KeywordRule {
+  const fallbackClip = bucket.clipPaths[bucket.clipPaths.length - 1] ?? 'idle.mp4'
+  const fileName = fallbackClip.replace(/^clips\//, '')
+  return {
+    id: bucket.id,
+    phrases: bucket.phrases,
+    clipFileName: fileName,
+    priority: bucket.priority,
+    description: bucket.description,
+  }
 }

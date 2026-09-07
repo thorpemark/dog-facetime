@@ -284,6 +284,9 @@ export function useMediaPlayback(
       const rule = rulesConfig.rules.find((r) => r.id === clipId)
       if (!rule) return
 
+      // TODO (clips fork): use reactionClipUrlForBucket(clipId) for random multi-clip pick
+      // from reactionCatalog.ts instead of a fixed rule.clipFileName.
+
       const incomingSlot =
         activeSlotRef.current === 'primary' ? 'secondary' : 'primary'
       const incomingVideo =
@@ -340,6 +343,8 @@ export function useMediaPlayback(
 
   const playReaction = useCallback(
     (clipId: string, onComplete: () => void) => {
+      // Dual mode: photos = Ken Burns stills (dog-facetime); video = clip library (this fork).
+      // TODO: honor memorial playbackMode ('photos' | 'clips' | 'both') once schema lands.
       if (usePhotos) {
         playPhotoReaction(clipId, onComplete)
       } else {
