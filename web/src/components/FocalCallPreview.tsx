@@ -28,7 +28,7 @@ export function FocalCallPreview({
         focal={focal}
         imageAspect={imageAspect}
         displayOrientation={displayOrientation}
-        motionClassName="focal-preview-media"
+        motionClassName="photo-layer-media focal-preview-media"
       />
     </div>
   )
